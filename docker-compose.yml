@@ -1,0 +1,28 @@
+# Local dev Postgres + pgvector for Haven.
+# In production this runs natively on the Beelink — compose is dev-only.
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: haven-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: haven
+      POSTGRES_PASSWORD: haven
+      POSTGRES_DB: haven
+      # Tuned for a household-scale workload on a laptop — bump for the Beelink.
+      POSTGRES_INITDB_ARGS: '--encoding=UTF8 --locale=C'
+    ports:
+      - '5432:5432'
+    volumes:
+      - haven-postgres-data:/var/lib/postgresql/data
+      - ./infra/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U haven -d haven']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+
+volumes:
+  haven-postgres-data:
+    name: haven-postgres-data
