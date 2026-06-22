@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 
 import { AGENT_ID } from './config.ts';
 import { sql } from './client.ts';
+import { asJson } from './jsonb.ts';
 
 type ResultStatus = 'ok' | 'error' | 'deferred';
 
@@ -36,7 +37,7 @@ export async function audit({
         ${tool},
         ${argsSha},
         ${resultStatus},
-        ${details === undefined ? null : JSON.stringify(details)}::jsonb
+        ${details === undefined || details === null ? null : asJson(details as Record<string, unknown>)}
       )
     `;
   } catch (e) {

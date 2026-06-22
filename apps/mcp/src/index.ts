@@ -5,8 +5,22 @@ import { AGENT_ID, SERVER_NAME, SERVER_VERSION } from './config.ts';
 import { audit } from './audit.ts';
 import { sql } from './client.ts';
 
-import { inboxList, inboxListSchema, inboxGet, inboxGetSchema } from './tools/inbox.ts';
-import { eventKindsList, eventKindsListSchema } from './tools/events.ts';
+import {
+  inboxAppend,
+  inboxAppendSchema,
+  inboxGet,
+  inboxGetSchema,
+  inboxList,
+  inboxListSchema,
+} from './tools/inbox.ts';
+import {
+  eventKindRegister,
+  eventKindRegisterSchema,
+  eventKindsList,
+  eventKindsListSchema,
+  eventLog,
+  eventLogSchema,
+} from './tools/events.ts';
 import {
   widgetList,
   widgetListSchema,
@@ -55,10 +69,11 @@ function withAudit(toolName: string, handler: ToolFn) {
   };
 }
 
-// --- Read-only tool surface (v0.1) ----------------------------------
-// Write-side tools (inbox_append, todo_create, event_log, widget_dispatch,
-// etc.) come next once Hermes is wired in and we have the approval-token
-// flow specified in the MCP contract §7.
+// --- Tool surface (v0.2) --------------------------------------------
+// Reads + write_low writes (inbox_append, event_log, event_kind_register)
+// auto-execute without an approval token. write_med + destructive tools
+// (todo_delete, ha_entity_call_service, widget_dispatch, etc.) require
+// the approval-token flow from MCP contract §7 — implemented later.
 
 server.tool(
   'inbox_list',
@@ -73,10 +88,28 @@ server.tool(
   withAudit('inbox_get', inboxGet as ToolFn),
 );
 server.tool(
+  'inbox_append',
+  'Append a new capture to raw_inbox. Resolves actor + device handles to ids.',
+  inboxAppendSchema,
+  withAudit('inbox_append', inboxAppend as ToolFn),
+);
+server.tool(
   'event_kinds_list',
   'List registered event kinds with their schemas, owning widget, and current counts.',
   eventKindsListSchema,
   withAudit('event_kinds_list', eventKindsList as ToolFn),
+);
+server.tool(
+  'event_kind_register',
+  'Register or update an event kind (idempotent on kind slug).',
+  eventKindRegisterSchema,
+  withAudit('event_kind_register', eventKindRegister as ToolFn),
+);
+server.tool(
+  'event_log',
+  'Log a household event of a given kind.',
+  eventLogSchema,
+  withAudit('event_log', eventLog as ToolFn),
 );
 server.tool(
   'widget_list',

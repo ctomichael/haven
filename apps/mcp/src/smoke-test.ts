@@ -52,14 +52,44 @@ const callAndPrint = async (
   }
 };
 
+// --- Reads --------------------------------------------------------------
 await callAndPrint('user_list', { actor: 'smoke-test' });
 await callAndPrint('device_list');
-await callAndPrint('event_kinds_list');
 await callAndPrint('widget_list');
-await callAndPrint('inbox_list', { limit: 5 });
-await callAndPrint('inbox_get', {
-  id: '00000000-0000-0000-0000-000000000000',
+
+// --- Writes -------------------------------------------------------------
+await callAndPrint('event_kind_register', {
+  kind: 'smoke_test_event',
+  description: 'Synthetic event written by the MCP smoke test.',
+  schema_json: { type: 'object', properties: { note: { type: 'string' } } },
+  actor: 'smoke-test',
 });
+
+const appendResult = (await client.callTool({
+  name: 'inbox_append',
+  arguments: {
+    source: 'smoke-test',
+    raw_text: 'Reminder: buy milk on the way home',
+    metadata: { lang: 'en' },
+    actor: 'smoke-test',
+  },
+})) as { content: Array<{ type: string; text?: string }>; isError?: boolean };
+const firstC = appendResult.content[0];
+const appendedRaw = firstC && firstC.type === 'text' ? firstC.text : undefined;
+const appended = appendedRaw ? (JSON.parse(appendedRaw) as { id: string; ts: string }) : null;
+console.log('\n=== inbox_append → ===');
+console.log(appended);
+
+await callAndPrint('event_log', {
+  kind: 'smoke_test_event',
+  metadata: { note: 'from smoke test' },
+  source_inbox_id: appended?.id,
+  actor: 'smoke-test',
+});
+
+// --- Verify the writes landed -------------------------------------------
+await callAndPrint('inbox_list', { limit: 3 });
+await callAndPrint('event_kinds_list');
 
 await client.close();
 process.exit(0);
