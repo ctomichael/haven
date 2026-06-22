@@ -2,8 +2,9 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "outDir": "./dist",
-    "types": ["bun-types"],
+    "types": ["bun"],
     "moduleResolution": "Bundler",
+    "allowImportingTsExtensions": true,
     "lib": ["ES2022"],
     "noEmit": true
   },

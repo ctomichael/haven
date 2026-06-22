@@ -3,8 +3,40 @@ import { logger } from 'hono/logger';
 import { cors } from 'hono/cors';
 import { streamSSE } from 'hono/streaming';
 
+import { migrate } from './db/migrator.ts';
+
 const PORT = Number(process.env.PORT ?? 8080);
 const STARTED_AT = new Date().toISOString();
+
+// Run pending safe migrations on boot. Failures don't crash the server —
+// the (forthcoming) /api/health upgrade reports the state for diagnosis.
+async function runMigrationsOnBoot(): Promise<void> {
+  try {
+    const result = await migrate();
+    if (result.error) {
+      console.warn(`[haven-backend] migrate error: ${result.error}`);
+      return;
+    }
+    if (result.applied.length) {
+      console.log(
+        `[haven-backend] applied ${result.applied.length} migration(s): ${result.applied.join(', ')}`,
+      );
+    }
+    if (result.skipped.length) {
+      console.warn(
+        `[haven-backend] skipped ${result.skipped.length} migration(s):`,
+      );
+      for (const s of result.skipped) {
+        console.warn(`  - ${s.name}: ${s.reason}`);
+      }
+    }
+  } catch (e) {
+    console.warn(
+      `[haven-backend] migrate threw: ${e instanceof Error ? e.message : String(e)}`,
+    );
+  }
+}
+runMigrationsOnBoot();
 
 const app = new Hono();
 

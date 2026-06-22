@@ -1,0 +1,13 @@
+# Squawk migration safety lint config for Haven.
+# See https://squawkhq.com/docs/rules for the full rule list.
+#
+# Rules excluded here are stylistic only — every safety-relevant rule stays on.
+# Anything squawk flags is treated as unsafe and held for manual approval.
+
+excluded_rules = [
+  "prefer-text-field",
+  "prefer-timestamptz",
+  "prefer-big-int",
+  "prefer-identity",
+  "prefer-robust-stmts",
+]
