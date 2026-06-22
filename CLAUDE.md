@@ -12,11 +12,16 @@ When you are dispatched with a plan, your job is to land the files described in 
 apps/
   backend/             Hono on Bun
     src/
-      index.ts         Entry point
-      routes/          One file per route group
-      services/        Cross-route logic
-      db/              (future) Migrations and DB access
-      mcp/             (future) HouseholdMCP server tools
+      index.ts         Entry point — REST + SSE
+      db/              Postgres client, migrator (squawk-linted), CLI
+      routes/          (future) One file per route group
+      services/        (future) Cross-route logic
+  mcp/                 HouseholdMCP server (stdio, @modelcontextprotocol/sdk)
+    src/
+      index.ts         Tool registry + audit wrapper
+      tools/           One file per domain (inbox, events, widgets, users)
+      audit.ts         audit_log writer
+      smoke-test.ts    `bun run smoke` — spawns server, calls each tool
   dashboard/           SvelteKit PWA
     src/
       routes/          SvelteKit pages
