@@ -7,6 +7,15 @@
     version: string;
     started_at: string;
     now: string;
+    db: { ok: boolean; latency_ms?: number; error?: string };
+    migrations: {
+      applied: string[];
+      pending: string[];
+      skipped: Array<{ name: string; reason: string }>;
+      last_applied: string | null;
+      error?: string;
+    };
+    squawk: { available: boolean };
   } | null;
 
   let health = $state<Health>(null);
@@ -58,15 +67,41 @@
 
   <section class="grid">
     <article class="tile">
-      <h2>Backend health</h2>
+      <h2>Backend</h2>
       {#if healthError}
         <p class="err">error: {healthError}</p>
       {:else if health}
         <dl>
+          <dt>overall</dt><dd>{health.ok ? 'ok' : 'degraded'}</dd>
           <dt>service</dt><dd>{health.service}</dd>
           <dt>version</dt><dd>{health.version}</dd>
           <dt>started</dt><dd><time datetime={health.started_at}>{health.started_at}</time></dd>
-          <dt>now</dt><dd><time datetime={health.now}>{health.now}</time></dd>
+        </dl>
+      {:else}
+        <p>loading…</p>
+      {/if}
+    </article>
+
+    <article class="tile">
+      <h2>Database</h2>
+      {#if health}
+        <dl>
+          <dt>ping</dt>
+          <dd>{health.db.ok ? `ok (${health.db.latency_ms} ms)` : `down — ${health.db.error ?? '?'}`}</dd>
+          <dt>applied</dt>
+          <dd>{health.migrations.last_applied ?? '—'} ({health.migrations.applied.length})</dd>
+          <dt>pending</dt>
+          <dd>{health.migrations.pending.length === 0 ? '0' : health.migrations.pending.join(', ')}</dd>
+          {#if health.migrations.skipped.length}
+            <dt>skipped</dt>
+            <dd>
+              {#each health.migrations.skipped as s}
+                <div>{s.name}: {s.reason}</div>
+              {/each}
+            </dd>
+          {/if}
+          <dt>squawk</dt>
+          <dd>{health.squawk.available ? 'available' : 'missing'}</dd>
         </dl>
       {:else}
         <p>loading…</p>
@@ -85,7 +120,7 @@
   </section>
 
   <footer>
-    <p>If both tiles show data and the heartbeat ticks, frontend ↔ backend wiring is good.</p>
+    <p>If overall is ok, the heartbeat ticks, and pending = 0, the scaffold is healthy end-to-end.</p>
   </footer>
 </main>
 
@@ -108,8 +143,11 @@
   }
   .grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(3, 1fr);
     gap: 24px;
+  }
+  @media (max-width: 900px) {
+    .grid { grid-template-columns: 1fr 1fr; }
   }
   .tile {
     border: 2px solid var(--ink);

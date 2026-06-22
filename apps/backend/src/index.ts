@@ -3,7 +3,9 @@ import { logger } from 'hono/logger';
 import { cors } from 'hono/cors';
 import { streamSSE } from 'hono/streaming';
 
-import { migrate } from './db/migrator.ts';
+import { pingDb } from './db/client.ts';
+import { migrate, status as migrationStatus } from './db/migrator.ts';
+import { squawkAvailable } from './db/squawk.ts';
 
 const PORT = Number(process.env.PORT ?? 8080);
 const STARTED_AT = new Date().toISOString();
@@ -45,15 +47,35 @@ app.use('/api/*', cors({ origin: ['http://localhost:5173', 'http://localhost:417
 
 app.get('/', (c) => c.text('Haven backend — see /api/health'));
 
-app.get('/api/health', (c) =>
-  c.json({
-    ok: true,
+app.get('/api/health', async (c) => {
+  const [db, migrations, squawk] = await Promise.all([
+    pingDb(),
+    migrationStatus(),
+    squawkAvailable().then((available) => ({ available })),
+  ]);
+
+  const ok =
+    db.ok &&
+    migrations.error === undefined &&
+    migrations.pending.length === 0;
+
+  return c.json({
+    ok,
     service: 'haven-backend',
     version: '0.0.0',
     started_at: STARTED_AT,
     now: new Date().toISOString(),
-  }),
-);
+    db,
+    migrations: {
+      applied: migrations.applied,
+      pending: migrations.pending,
+      skipped: migrations.skipped,
+      last_applied: migrations.applied.at(-1) ?? null,
+      ...(migrations.error !== undefined && { error: migrations.error }),
+    },
+    squawk,
+  });
+});
 
 // SSE: heartbeat every 3s plus a one-shot 'hello' on connect.
 // This is the channel the dashboard subscribes to for 'dashboard:reload' and live updates later.
