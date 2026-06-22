@@ -1,192 +1,174 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
 
-  type Health = {
-    ok: boolean;
-    service: string;
-    version: string;
-    started_at: string;
-    now: string;
-    db: { ok: boolean; latency_ms?: number; error?: string };
-    migrations: {
-      applied: string[];
-      pending: string[];
-      skipped: Array<{ name: string; reason: string }>;
-      last_applied: string | null;
-      error?: string;
-    };
-    squawk: { available: boolean };
-  } | null;
+  import ClockWidget from '$lib/components/ClockWidget.svelte';
+  import WeatherWidget from '$lib/components/WeatherWidget.svelte';
+  import CalendarToday from '$lib/components/CalendarToday.svelte';
+  import TodoList from '$lib/components/TodoList.svelte';
+  import ShoppingList from '$lib/components/ShoppingList.svelte';
+  import SensorTile from '$lib/components/SensorTile.svelte';
+  import CaptureButton from '$lib/components/CaptureButton.svelte';
+  import StatusBar from '$lib/components/StatusBar.svelte';
 
-  let health = $state<Health>(null);
-  let healthError = $state<string | null>(null);
-  let lastHeartbeat = $state<string | null>(null);
-  let sseStatus = $state<'connecting' | 'open' | 'closed' | 'error'>('connecting');
-  let helloPayload = $state<string | null>(null);
-  let es: EventSource | undefined;
+  import { dummy } from '$lib/dummy';
 
-  async function fetchHealth() {
-    try {
-      const res = await fetch('/api/health');
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      health = (await res.json()) as Health;
-      healthError = null;
-    } catch (e) {
-      healthError = e instanceof Error ? e.message : String(e);
-      health = null;
-    }
-  }
+  // Masthead meta — week-of-year · day-of-year. Refresh once a minute.
+  let now = $state(new Date());
+  let timer: ReturnType<typeof setInterval> | undefined;
 
   onMount(() => {
-    fetchHealth();
-    const healthInterval = setInterval(fetchHealth, 5000);
-
-    es = new EventSource('/api/events');
-    es.addEventListener('open', () => (sseStatus = 'open'));
-    es.addEventListener('error', () => (sseStatus = 'error'));
-    es.addEventListener('hello', (e) => (helloPayload = e.data));
-    es.addEventListener('heartbeat', (e) => {
-      const parsed = JSON.parse(e.data) as { ts: string };
-      lastHeartbeat = parsed.ts;
-    });
-
-    return () => clearInterval(healthInterval);
+    timer = setInterval(() => (now = new Date()), 60_000);
   });
-
   onDestroy(() => {
-    es?.close();
-    sseStatus = 'closed';
+    if (timer) clearInterval(timer);
   });
+
+  function weekOfYear(d: Date): number {
+    const a = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+    const dayNum = (a.getUTCDay() + 6) % 7;
+    a.setUTCDate(a.getUTCDate() - dayNum + 3);
+    const firstThursday = new Date(Date.UTC(a.getUTCFullYear(), 0, 4));
+    return (
+      1 + Math.round(((a.getTime() - firstThursday.getTime()) / 86400000 - 3 + ((firstThursday.getUTCDay() + 6) % 7)) / 7)
+    );
+  }
+  function dayOfYear(d: Date): number {
+    const start = new Date(d.getFullYear(), 0, 0);
+    return Math.floor((d.getTime() - start.getTime()) / 86400000);
+  }
+
+  let mastheadMeta = $derived(`WEEK ${weekOfYear(now)} · ${dayOfYear(now)}/365`);
 </script>
 
-<main>
-  <header>
-    <h1>Haven</h1>
-    <p class="sub">Household dashboard — scaffold check</p>
+<main class="dash">
+  <header class="masthead">
+    <div class="title-block">
+      <span class="title">{dummy.masthead.title}</span>
+      <span class="subtitle">{dummy.masthead.subtitle}</span>
+    </div>
+    <span class="meta">{mastheadMeta}</span>
   </header>
 
   <section class="grid">
-    <article class="tile">
-      <h2>Backend</h2>
-      {#if healthError}
-        <p class="err">error: {healthError}</p>
-      {:else if health}
-        <dl>
-          <dt>overall</dt><dd>{health.ok ? 'ok' : 'degraded'}</dd>
-          <dt>service</dt><dd>{health.service}</dd>
-          <dt>version</dt><dd>{health.version}</dd>
-          <dt>started</dt><dd><time datetime={health.started_at}>{health.started_at}</time></dd>
-        </dl>
-      {:else}
-        <p>loading…</p>
-      {/if}
-    </article>
+    <div class="cell clock"><ClockWidget /></div>
+    <div class="cell weather">
+      <WeatherWidget
+        city={dummy.weather.city}
+        currentTemp={dummy.weather.currentTemp}
+        currentLabel={dummy.weather.currentLabel}
+        forecast={dummy.weather.forecast}
+      />
+    </div>
 
-    <article class="tile">
-      <h2>Database</h2>
-      {#if health}
-        <dl>
-          <dt>ping</dt>
-          <dd>{health.db.ok ? `ok (${health.db.latency_ms} ms)` : `down — ${health.db.error ?? '?'}`}</dd>
-          <dt>applied</dt>
-          <dd>{health.migrations.last_applied ?? '—'} ({health.migrations.applied.length})</dd>
-          <dt>pending</dt>
-          <dd>{health.migrations.pending.length === 0 ? '0' : health.migrations.pending.join(', ')}</dd>
-          {#if health.migrations.skipped.length}
-            <dt>skipped</dt>
-            <dd>
-              {#each health.migrations.skipped as s}
-                <div>{s.name}: {s.reason}</div>
-              {/each}
-            </dd>
-          {/if}
-          <dt>squawk</dt>
-          <dd>{health.squawk.available ? 'available' : 'missing'}</dd>
-        </dl>
-      {:else}
-        <p>loading…</p>
-      {/if}
-    </article>
+    <div class="cell calendar">
+      <CalendarToday events={dummy.calendar} />
+    </div>
+    <div class="cell todo">
+      <TodoList todos={dummy.todos} />
+    </div>
+    <div class="cell shopping">
+      <ShoppingList items={dummy.shopping.items} moreCount={dummy.shopping.moreCount} />
+    </div>
 
-    <article class="tile">
-      <h2>SSE stream</h2>
-      <dl>
-        <dt>status</dt><dd>{sseStatus}</dd>
-        <dt>hello</dt><dd>{helloPayload ?? '—'}</dd>
-        <dt>last heartbeat</dt>
-        <dd>{lastHeartbeat ?? '—'}</dd>
-      </dl>
-    </article>
+    <div class="cell sensor-a"><SensorTile sensor={dummy.sensors[0]} /></div>
+    <div class="cell sensor-b"><SensorTile sensor={dummy.sensors[1]} /></div>
+    <div class="cell capture"><CaptureButton /></div>
   </section>
 
-  <footer>
-    <p>If overall is ok, the heartbeat ticks, and pending = 0, the scaffold is healthy end-to-end.</p>
-  </footer>
+  <StatusBar
+    online={dummy.status.online}
+    lastSync={dummy.status.lastSync}
+    hermesReady={dummy.status.hermesReady}
+    identities={dummy.status.identities}
+  />
 </main>
 
 <style>
-  main {
-    max-width: 960px;
-    margin: 0 auto;
-    padding: 48px 32px;
-  }
-  header { margin-bottom: 32px; }
-  h1 {
-    font-size: 60px;
-    font-weight: 500;
-    letter-spacing: -0.02em;
-    margin: 0;
-  }
-  .sub {
-    margin: 4px 0 0;
-    color: var(--ink-2);
-  }
-  .grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 24px;
-  }
-  @media (max-width: 900px) {
-    .grid { grid-template-columns: 1fr 1fr; }
-  }
-  .tile {
-    border: 2px solid var(--ink);
-    padding: 24px;
+  .dash {
+    width: 100vw;
+    min-height: 100vh;
     background: var(--paper);
+    padding: 36px;
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+    box-sizing: border-box;
   }
-  h2 {
-    font-size: 24px;
-    margin: 0 0 16px;
+
+  .masthead {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    padding-bottom: 16px;
+    border-bottom: var(--border-normal) solid var(--ink);
+    gap: 16px;
+  }
+  .title-block {
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+  }
+  .title {
+    font-family: var(--font-serif);
     font-weight: 500;
-    border-bottom: 1px solid var(--ink-2);
-    padding-bottom: 8px;
+    font-size: 34px;
+    line-height: 0.9;
+    letter-spacing: 0.01em;
+    color: var(--ink);
   }
-  dl {
-    display: grid;
-    grid-template-columns: max-content 1fr;
-    gap: 6px 16px;
-    margin: 0;
-    font-variant-numeric: tabular-nums;
-  }
-  dt {
+  .subtitle {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    letter-spacing: 0.26em;
     color: var(--ink-2);
-    font-size: 14px;
     text-transform: uppercase;
-    letter-spacing: 0.04em;
   }
-  dd {
-    margin: 0;
-    font-size: 18px;
-    word-break: break-all;
+  .meta {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    letter-spacing: 0.18em;
+    color: var(--ink);
   }
-  footer {
-    margin-top: 32px;
-    color: var(--ink-2);
-    font-size: 14px;
+
+  .grid {
+    flex: 1;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    grid-template-rows: 200px 1fr 128px;
+    gap: 28px 26px;
   }
-  .err { color: #b00; }
-  @media (max-width: 700px) {
-    .grid { grid-template-columns: 1fr; }
-    h1 { font-size: 44px; }
+
+  .clock     { grid-column: 1 / 6;  grid-row: 1; }
+  .weather   { grid-column: 6 / 13; grid-row: 1; }
+  .calendar  { grid-column: 1 / 6;  grid-row: 2; }
+  .todo      { grid-column: 6 / 10; grid-row: 2; }
+  .shopping  { grid-column: 10 / 13; grid-row: 2; }
+  .sensor-a  { grid-column: 1 / 3;  grid-row: 3; }
+  .sensor-b  { grid-column: 3 / 5;  grid-row: 3; }
+  .capture   { grid-column: 5 / 13; grid-row: 3; }
+
+  .cell {
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Phone surface fallback — stack everything vertically on narrow viewports.
+   * Real phone PWA layout comes later. */
+  @media (max-width: 600px) {
+    .dash {
+      padding: 20px;
+      gap: 16px;
+    }
+    .grid {
+      grid-template-columns: 1fr;
+      grid-template-rows: auto;
+      gap: 24px;
+    }
+    .clock, .weather, .calendar, .todo, .shopping, .sensor-a, .sensor-b, .capture {
+      grid-column: 1 / 2;
+      grid-row: auto;
+    }
   }
 </style>

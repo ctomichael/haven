@@ -10,6 +10,12 @@
     "preview": "vite preview --host --port 4173",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json"
   },
+  "dependencies": {
+    "@fontsource/ibm-plex-mono": "^5.1.0",
+    "@fontsource/newsreader": "^5.1.0",
+    "@fontsource/public-sans": "^5.1.0",
+    "lucide-svelte": "^0.469.0"
+  },
   "devDependencies": {
     "@sveltejs/adapter-node": "^5.2.0",
     "@sveltejs/kit": "^2.7.0",

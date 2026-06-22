@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,ital,wght@6..72,0,400;6..72,0,500;6..72,1,400&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  button { font-family: inherit; }
+  .hv-scroll::-webkit-scrollbar { width: 0; height: 0; }
+</style>
+</helmet>
+
+<div style="min-width:100%; min-height:100vh; box-sizing:border-box; padding:48px; background:#e7e5df; font-family:'Public Sans', sans-serif; display:flex; flex-direction:column; align-items:center; gap:24px;">
+
+  <div style="display:flex; flex-direction:column; gap:5px; align-self:flex-start;">
+    <span style="font-family:'IBM Plex Mono', monospace; font-size:12px; letter-spacing:0.22em; color:#43464d; text-transform:uppercase;">Phone PWA — interactive</span>
+    <span style="font-family:'IBM Plex Mono', monospace; font-size:11px; letter-spacing:0.12em; color:#8c8275;">390×844 · tap the + to capture → save files it to the inbox → confirm or re-file Hermes' guess · the same tokens, with motion</span>
+  </div>
+
+  <!-- PHONE -->
+  <div style="background:#1d1f24; padding:14px; border-radius:58px; box-shadow:0 36px 80px rgba(0,0,0,0.32); flex:none;">
+    <div style="position:relative; width:390px; height:844px; background:#FFFFFF; color:#000; border-radius:46px; overflow:hidden; display:flex; flex-direction:column;">
+
+      <!-- dynamic island -->
+      <div style="position:absolute; top:13px; left:50%; transform:translateX(-50%); width:118px; height:34px; background:#000; border-radius:20px; z-index:60;"></div>
+
+      <!-- status bar -->
+      <div style="height:54px; flex:none; display:flex; align-items:center; justify-content:space-between; padding:0 30px 0 32px; z-index:50;">
+        <span style="font-family:'Public Sans', sans-serif; font-weight:600; font-size:16px; letter-spacing:0.02em;">21:18</span>
+        <span style="display:inline-flex; align-items:center; gap:7px;">
+          <svg width="18" height="14" viewBox="0 0 24 18" fill="#000"><rect x="0" y="11" width="4" height="6" rx="1"/><rect x="6" y="7" width="4" height="10" rx="1"/><rect x="12" y="3" width="4" height="14" rx="1"/><rect x="18" y="0" width="4" height="17" rx="1" opacity="0.3"/></svg>
+          <svg width="18" height="14" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13a10 10 0 0 1 14 0"/><path d="M8.5 16.5a5 5 0 0 1 7 0"/><path d="M2 9.5a15 15 0 0 1 20 0"/><path d="M12 20h.01"/></svg>
+          <span style="display:inline-flex; align-items:center; gap:3px;"><span style="width:24px; height:13px; border:2px solid #000; border-radius:3px; display:inline-flex; padding:1px;"><span style="flex:1; background:#000; border-radius:1px;"></span></span><span style="width:2px; height:5px; background:#000; border-radius:0 1px 1px 0;"></span></span>
+        </span>
+      </div>
+
+      <!-- ===== TODAY VIEW ===== -->
+      <sc-if value="{{ isToday }}" hint-placeholder-val="{{ true }}">
+      <div class="hv-scroll" style="flex:1; min-height:0; overflow-y:auto; padding:8px 24px 130px;">
+        <div style="display:flex; align-items:baseline; justify-content:space-between; padding-bottom:16px; border-bottom:2px solid #000;">
+          <span style="font-family:'Newsreader', serif; font-weight:500; font-size:26px;">Haven</span>
+          <span style="font-family:'IBM Plex Mono', monospace; font-size:12px; letter-spacing:0.14em; color:#4A4A4A;">MON 22 JUN · 21:18</span>
+        </div>
+        <h1 style="font-family:'Newsreader', serif; font-weight:500; font-size:38px; line-height:1.1; margin:24px 0 4px;">Good evening, Anna.</h1>
+        <p style="font-family:'Public Sans', sans-serif; font-size:16px; color:#4A4A4A; margin:0 0 8px;">One event left today, two notes waiting to file.</p>
+
+        <div style="margin-top:24px;">
+          <span style="font-family:'Public Sans', sans-serif; font-size:12px; font-weight:600; letter-spacing:0.16em; text-transform:uppercase; color:#4A4A4A;">Up next</span>
+          <div style="border-top:2px solid #000; margin-top:10px; padding-top:14px; display:flex; align-items:flex-start; gap:14px;">
+            <span style="font-family:'IBM Plex Mono', monospace; font-size:16px; font-weight:500; width:54px; flex:none;">19:30</span>
+            <span style="width:11px; height:11px; border-radius:50%; background:#7E9168; flex:none; margin-top:5px;"></span>
+            <div><div style="font-family:'Public Sans', sans-serif; font-size:20px; font-weight:500;">Book club — Anna</div><div style="font-family:'IBM Plex Mono', monospace; font-size:13px; color:#4A4A4A; margin-top:2px;">THE WARDROBE · IN 12 MIN</div></div>
+          </div>
+        </div>
+
+        <div style="margin-top:26px;">
+          <span style="font-family:'Public Sans', sans-serif; font-size:12px; font-weight:600; letter-spacing:0.16em; text-transform:uppercase; color:#4A4A4A;">Needs you</span>
+          <div style="border-top:2px solid #000; margin-top:10px; padding-top:14px; display:flex; align-items:center; gap:14px;">
+            <span style="width:32px; height:32px; flex:none; border:2px solid #000;"></span>
+            <span style="font-family:'Public Sans', sans-serif; font-size:18px; flex:1;">Book MOT for the Golf</span>
+            <span style="font-family:'Public Sans', sans-serif; font-size:11px; font-weight:600; letter-spacing:0.06em; text-transform:uppercase; background:#ECD9D0; padding:3px 8px; border-radius:2px;">2 days over</span>
+          </div>
+        </div>
+
+        <div onClick="{{ goInbox }}" style="margin-top:26px; cursor:pointer;">
+          <div style="display:flex; align-items:baseline; justify-content:space-between;"><span style="font-family:'Public Sans', sans-serif; font-size:12px; font-weight:600; letter-spacing:0.16em; text-transform:uppercase; color:#4A4A4A;">Captured today</span><span style="font-family:'IBM Plex Mono', monospace; font-size:12px; letter-spacing:0.12em; color:#000;">{{ inboxCount }} WAITING ›</span></div>
+          <div style="border:2px solid #000; margin-top:10px; padding:16px 18px;">
+            <div style="font-family:'Newsreader', serif; font-size:19px; line-height:1.4; color:#000;">“Get Edith's swim kit before Thursday…”</div>
+            <div style="display:flex; gap:8px; margin-top:12px;"><span style="font-family:'Public Sans', sans-serif; font-size:11px; font-weight:600; letter-spacing:0.06em; text-transform:uppercase; background:#D7E0E9; padding:3px 8px; border-radius:2px;">To-do · Kids</span><span style="font-family:'Public Sans', sans-serif; font-size:11px; font-weight:600; letter-spacing:0.06em; text-transform:uppercase; background:#E4DDD2; padding:3px 8px; border-radius:2px;">+1 more</span></div>
+          </div>
+        </div>
+
+        <div style="margin-top:26px;">
+          <span style="font-family:'Public Sans', sans-serif; font-size:12px; font-weight:600; letter-spacing:0.16em; text-transform:uppercase; color:#4A4A4A;">At a glance</span>
+          <div style="border-top:2px solid #000; margin-top:10px; display:flex;">
+            <div style="flex:1; padding:14px 0; border-right:2px solid #ECECEC;"><div style="font-family:'IBM Plex Mono', monospace; font-weight:500; font-size:30px;">5<span style="font-size:18px; color:#8c8275;">/12</span></div><div style="font-family:'IBM Plex Mono', monospace; font-size:11px; letter-spacing:0.1em; color:#4A4A4A; margin-top:2px;">TO-DO</div></div>
+            <div style="flex:1; padding:14px 0 14px 18px; border-right:2px solid #ECECEC;"><div style="font-family:'IBM Plex Mono', monospace; font-weight:500; font-size:30px;">13</div><div style="font-family:'IBM Plex Mono', monospace; font-size:11px; letter-spacing:0.1em; color:#4A4A4A; margin-top:2px;">SHOPPING</div></div>
+            <div style="flex:1; padding:14px 0 14px 18px;"><div style="font-family:'IBM Plex Mono', monospace; font-weight:500; font-size:30px;">21<span style="font-size:18px; color:#8c8275;">°C</span></div><div style="font-family:'IBM Plex Mono', monospace; font-size:11px; letter-spacing:0.1em; color:#4A4A4A; margin-top:2px;">HOME</div></div>
+          </div>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ===== INBOX VIEW ===== -->
+      <sc-if value="{{ isInbox }}" hint-placeholder-val="{{ false }}">
+      <div class="hv-scroll" style="flex:1; min-height:0; overflow-y:auto; padding:8px 24px 130px;">
+        <div style="display:flex; align-items:baseline; justify-content:space-between; padding-bottom:16px; border-bottom:2px solid #000;">
+          <h1 style="font-family:'Newsreader', serif; font-weight:500; font-size:34px; margin:0;">Inbox</h1>
+          <span style="font-family:'IBM Plex Mono', monospace; font-size:12px; letter-spacing:0.14em; color:#000;">{{ inboxCount }} TO REVIEW · {{ filed }} FILED</span>
+        </div>
+
+        <sc-if value="{{ hasInbox }}" hint-placeholder-val="{{ true }}">
+        <div style="padding-top:8px;">
+          <sc-for list="{{ inboxVM }}" as="item" hint-placeholder-count="3">
+            <div style="border:2px solid #000; padding:18px; margin-top:16px;">
+              <div style="font-family:'Newsreader', serif; font-size:20px; line-height:1.4; color:#000;">{{ item.text }}</div>
+              <div style="display:flex; align-items:center; gap:10px; margin-top:14px;">
+                <span style="font-family:'IBM Plex Mono', monospace; font-size:11px; letter-spacing:0.14em; color:#8c8275;">FILE AS</span>
+                <sc-for list="{{ item.options }}" as="opt" hint-placeholder-count="3">
+                  <button onClick="{{ opt.pick }}" style="background:{{ opt.bg }}; border:{{ opt.border }}; color:#000; font-family:'Public Sans', sans-serif; font-size:11px; font-weight:600; letter-spacing:0.06em; text-transform:uppercase; padding:4px 9px; border-radius:2px; cursor:pointer;" style-active="transform:scale(0.96)">{{ opt.label }}</button>
+                </sc-for>
+              </div>
+              <div style="display:flex; gap:12px; margin-top:16px;">
+                <button onClick="{{ item.confirm }}" style="flex:1; height:52px; background:#000; color:#FFF; border:none; display:flex; align-items:center; justify-content:center; gap:10px; cursor:pointer;" style-active="transform:scale(0.98)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg><span style="font-family:'Public Sans', sans-serif; font-weight:600; font-size:16px;">Confirm</span></button>
+                <button onClick="{{ item.confirm }}" style="height:52px; padding:0 20px; background:#FFF; border:2px solid #000; font-family:'IBM Plex Mono', monospace; font-size:13px; letter-spacing:0.14em; cursor:pointer;" style-active="transform:scale(0.98)">EDIT</button>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+        </sc-if>
+
+        <sc-if value="{{ noInbox }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; padding:90px 20px; text-align:center;">
+          <span style="width:64px; height:64px; border:4px solid #7E9168; border-radius:50%; display:flex; align-items:center; justify-content:center;"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#7E9168" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>
+          <div style="font-family:'Newsreader', serif; font-size:26px; margin-top:22px;">Inbox zero</div>
+          <div style="font-family:'IBM Plex Mono', monospace; font-size:13px; letter-spacing:0.12em; color:#8c8275; margin-top:8px;">EVERYTHING'S FILED — {{ filed }} TODAY</div>
+        </div>
+        </sc-if>
+      </div>
+      </sc-if>
+
+      <!-- ===== BOTTOM BAR + FAB ===== -->
+      <div style="position:absolute; left:0; right:0; bottom:0; height:108px; background:#FFF; border-top:2px solid #000; z-index:40; display:flex; align-items:flex-start; padding:14px 0 0; justify-content:space-around;">
+        <button onClick="{{ goToday }}" style="background:none; border:none; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:6px; padding:6px 30px; color:{{ todayColor }};">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 10h18"/><path d="M8 2v4"/><path d="M16 2v4"/></svg>
+          <span style="font-family:'IBM Plex Mono', monospace; font-size:11px; letter-spacing:0.1em;">TODAY</span>
+        </button>
+        <button onClick="{{ goInbox }}" style="background:none; border:none; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:6px; padding:6px 30px; color:{{ inboxColor }};">
+          <span style="position:relative;"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg><span style="position:absolute; top:-4px; right:-7px; min-width:18px; height:18px; background:#A85C42; color:#FFF; border-radius:9px; font-family:'IBM Plex Mono', monospace; font-size:11px; display:flex; align-items:center; justify-content:center; padding:0 4px; opacity:{{ badgeOpacity }};">{{ inboxCount }}</span></span>
+          <span style="font-family:'IBM Plex Mono', monospace; font-size:11px; letter-spacing:0.1em;">INBOX</span>
+        </button>
+      </div>
+      <button onClick="{{ openSheet }}" style="position:absolute; bottom:74px; left:50%; transform:translateX(-50%); width:66px; height:66px; border-radius:50%; background:#000; border:4px solid #FFF; box-shadow:0 6px 18px rgba(0,0,0,0.28); cursor:pointer; display:flex; align-items:center; justify-content:center; z-index:45;" style-active="transform:translateX(-50%) scale(0.94)"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#FFF" stroke-width="2.6" stroke-linecap="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg></button>
+
+      <!-- ===== CAPTURE SHEET ===== -->
+      <div style="position:absolute; inset:0; background:#FFF; z-index:70; display:flex; flex-direction:column; transform:{{ sheetTransform }}; transition:transform 0.32s cubic-bezier(0.4,0,0.1,1); box-shadow:0 -20px 60px rgba(0,0,0,0.18);">
+        <div style="height:54px; flex:none;"></div>
+        <div style="display:flex; align-items:center; justify-content:space-between; padding:6px 24px 16px; border-bottom:2px solid #000;">
+          <span style="display:inline-flex; align-items:center; gap:10px; font-family:'IBM Plex Mono', monospace; font-size:13px; letter-spacing:0.18em;"><span style="width:8px; height:8px; background:#000;"></span>NEW NOTE</span>
+          <button onClick="{{ closeSheet }}" style="width:48px; height:48px; border:2px solid #000; background:#FFF; cursor:pointer; display:flex; align-items:center; justify-content:center;" style-active="transform:scale(0.95)"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2.5" stroke-linecap="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+        </div>
+        <div style="flex:1; min-height:0; padding:22px 24px; display:flex; flex-direction:column;">
+          <textarea value="{{ draft }}" onChange="{{ onDraft }}" placeholder="What's on your mind?" style="flex:1; width:100%; border:none; outline:none; resize:none; font-family:'Newsreader', serif; font-size:26px; line-height:1.45; color:#000; background:transparent;"></textarea>
+          <div style="display:flex; align-items:center; gap:10px; padding-top:14px; border-top:2px solid #ECECEC;">
+            <span style="font-family:'IBM Plex Mono', monospace; font-size:11px; letter-spacing:0.14em; color:#8c8275;">HERMES WILL FILE THIS</span>
+            <span style="font-family:'Public Sans', sans-serif; font-size:11px; font-weight:600; letter-spacing:0.06em; text-transform:uppercase; background:#D7E0E9; padding:3px 8px; border-radius:2px;">Auto-sort on save</span>
+          </div>
+        </div>
+        <div style="padding:16px 24px 30px; border-top:2px solid #000; display:flex; align-items:center; gap:12px;">
+          <button style="width:64px; height:64px; border-radius:50%; border:3px solid #000; background:#FFF; cursor:pointer; display:flex; align-items:center; justify-content:center; flex:none;" style-active="transform:scale(0.95)"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg></button>
+          <button style="width:64px; height:64px; border:2px solid #000; background:#FFF; cursor:pointer; display:flex; align-items:center; justify-content:center; flex:none;" style-active="transform:scale(0.95)"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg></button>
+          <button onClick="{{ saveDraft }}" style="flex:1; height:64px; background:#000; color:#FFF; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:12px;" style-active="transform:scale(0.98)"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg><span style="font-family:'Newsreader', serif; font-size:23px; white-space:nowrap;">Save note</span></button>
+        </div>
+      </div>
+
+      <!-- home indicator -->
+      <div style="position:absolute; bottom:9px; left:50%; transform:translateX(-50%); width:138px; height:5px; background:#000; border-radius:3px; z-index:80; opacity:0.85;"></div>
+
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:520,&quot;height&quot;:1000}}">
+class Component extends DCLogic {
+  state = {
+    tab: 'today',
+    sheetOpen: false,
+    draft: '',
+    filed: 0,
+    inbox: [
+      { id: 1, text: "Get Edith's swim kit before Thursday — goggles too.", category: 'To-do · Kids', options: ['To-do · Kids', 'Shopping', 'Calendar'] },
+      { id: 2, text: 'Book annual leave — week of 14 July with work.', category: 'To-do · Errand', options: ['To-do · Errand', 'Calendar', 'Note'] },
+      { id: 3, text: 'Miso aubergine recipe from the weekend — save it.', category: 'Note · Recipes', options: ['Note · Recipes', 'Shopping', 'To-do'] },
+    ],
+  };
+  go(tab) { this.setState({ tab }); }
+  openSheet() { this.setState({ sheetOpen: true }); }
+  closeSheet() { this.setState({ sheetOpen: false }); }
+  onDraft(e) { this.setState({ draft: e.target.value }); }
+  saveDraft() {
+    const d = this.state.draft.trim();
+    if (!d) { this.setState({ sheetOpen: false }); return; }
+    const item = { id: Date.now(), text: d, category: 'To-do · Kids', options: ['To-do · Kids', 'Shopping', 'Note'] };
+    this.setState({ inbox: [item, ...this.state.inbox], draft: '', sheetOpen: false, tab: 'inbox' });
+  }
+  setCategory(id, opt) { this.setState({ inbox: this.state.inbox.map((i) => i.id === id ? { ...i, category: opt } : i) }); }
+  confirmItem(id) { this.setState({ inbox: this.state.inbox.filter((i) => i.id !== id), filed: this.state.filed + 1 }); }
+  renderVals() {
+    const s = this.state;
+    const tint = { 'To-do · Kids': '#D7E0E9', 'Shopping': '#DDE5D4', 'Calendar': '#D7E0E9', 'To-do · Errand': '#EFE3C8', 'Note': '#E4DDD2', 'Note · Recipes': '#E4DDD2', 'To-do': '#EFE3C8' };
+    const inboxVM = s.inbox.map((i) => ({
+      text: i.text,
+      confirm: () => this.confirmItem(i.id),
+      options: i.options.map((opt) => ({
+        label: opt,
+        pick: () => this.setCategory(i.id, opt),
+        bg: opt === i.category ? (tint[opt] || '#E4DDD2') : 'transparent',
+        border: opt === i.category ? '2px solid transparent' : '2px solid #C8C2B8',
+      })),
+    }));
+    return {
+      isToday: s.tab === 'today',
+      isInbox: s.tab === 'inbox',
+      hasInbox: s.inbox.length > 0,
+      noInbox: s.inbox.length === 0,
+      inboxCount: s.inbox.length,
+      filed: s.filed,
+      inboxVM,
+      sheetTransform: s.sheetOpen ? 'translateY(0)' : 'translateY(100%)',
+      draft: s.draft,
+      todayColor: s.tab === 'today' ? '#000000' : '#B6B0A6',
+      inboxColor: s.tab === 'inbox' ? '#000000' : '#B6B0A6',
+      badgeOpacity: s.inbox.length > 0 ? 1 : 0,
+      goToday: () => this.go('today'),
+      goInbox: () => this.go('inbox'),
+      openSheet: () => this.openSheet(),
+      closeSheet: () => this.closeSheet(),
+      onDraft: (e) => this.onDraft(e),
+      saveDraft: () => this.saveDraft(),
+    };
+  }
+}
+</script>
+</body>
+</html>

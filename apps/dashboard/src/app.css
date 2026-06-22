@@ -1,0 +1,143 @@
+/* Design tokens — see design/design_handoff_haven/README.md.
+ * Mirrored in src/lib/tokens.ts for JS access. */
+
+@import '@fontsource/newsreader/400.css';
+@import '@fontsource/newsreader/500.css';
+@import '@fontsource/newsreader/400-italic.css';
+@import '@fontsource/public-sans/400.css';
+@import '@fontsource/public-sans/500.css';
+@import '@fontsource/public-sans/600.css';
+@import '@fontsource/public-sans/700.css';
+@import '@fontsource/ibm-plex-mono/400.css';
+@import '@fontsource/ibm-plex-mono/500.css';
+
+:root {
+  /* Neutrals */
+  --ink: #000000;
+  --ink-2: #4a4a4a;
+  --paper: #ffffff;
+  --paper-2: #f0f0f0;
+  --hairline: #ececec;
+  --hairline-2: #e2e2e2;
+  --disabled: #c8c2b8;
+  --muted-mono: #8c8275;
+
+  /* Accent solids — for dots, checked fills, identity, density, chart marks */
+  --accent-sage: #7e9168;
+  --accent-amber: #b98a3e;
+  --accent-rust: #a85c42;
+  --accent-sky: #6e8aa8;
+  --accent-stone: #8c8275;
+
+  /* Accent tints — chip backgrounds, comfort bands, fills behind ink text */
+  --accent-sage-tint: #dde5d4;
+  --accent-amber-tint: #efe3c8;
+  --accent-rust-tint: #ecd9d0;
+  --accent-sky-tint: #d7e0e9;
+  --accent-stone-tint: #e4ddd2;
+
+  /* Spacing scale — base 8 */
+  --space-4: 4px;
+  --space-8: 8px;
+  --space-12: 12px;
+  --space-16: 16px;
+  --space-24: 24px;
+  --space-32: 32px;
+  --space-48: 48px;
+  --space-64: 64px;
+  --space-96: 96px;
+
+  /* Borders */
+  --border-thin: 1px;
+  --border-normal: 2px;
+  --border-thick: 4px;
+
+  /* Font families */
+  --font-serif: 'Newsreader', 'Times New Roman', serif;
+  --font-sans: 'Public Sans', system-ui, -apple-system, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, 'Menlo', monospace;
+
+  color-scheme: light;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 20px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+button {
+  font-family: inherit;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  color: inherit;
+}
+
+/* E-ink surface: forbid animation and transitions completely.
+ * Applied at <body data-surface="eink"> on the wall route. */
+body[data-surface='eink'] *,
+body[data-surface='eink'] *::before,
+body[data-surface='eink'] *::after {
+  transition: none !important;
+  animation: none !important;
+}
+
+/* Type scale utilities — match design tokens. */
+.t-caption {
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: 14px;
+  line-height: 1.4;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+.t-body {
+  font-family: var(--font-sans);
+  font-weight: 400;
+  font-size: 20px;
+  line-height: 1.5;
+}
+.t-body-lg {
+  font-family: var(--font-sans);
+  font-weight: 400;
+  font-size: 24px;
+  line-height: 1.45;
+}
+.t-h3 {
+  font-family: var(--font-serif);
+  font-weight: 500;
+  font-size: 32px;
+  line-height: 1.2;
+}
+.t-h2 {
+  font-family: var(--font-serif);
+  font-weight: 500;
+  font-size: 44px;
+  line-height: 1.1;
+}
+.t-h1 {
+  font-family: var(--font-serif);
+  font-weight: 500;
+  font-size: 60px;
+  line-height: 1.05;
+}
+.t-mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
