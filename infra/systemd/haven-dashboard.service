@@ -1,0 +1,28 @@
+[Unit]
+Description=Haven dashboard (SvelteKit SSR via adapter-node)
+Documentation=https://github.com/michael/haven
+After=network-online.target haven-backend.service
+Wants=network-online.target
+Requires=haven-backend.service
+
+[Service]
+Type=simple
+User=haven
+Group=haven
+WorkingDirectory=/opt/haven/apps/dashboard
+EnvironmentFile=/etc/haven/.env
+Environment=HOST=127.0.0.1
+Environment=PORT=3000
+ExecStart=/usr/local/bin/bun run build/index.js
+Restart=on-failure
+RestartSec=5s
+StandardOutput=journal
+StandardError=journal
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target

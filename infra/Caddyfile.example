@@ -1,0 +1,51 @@
+# Haven — Caddyfile template.
+# Installed to /etc/caddy/Caddyfile by `infra/install.sh`.
+#
+# TLS is via Cloudflare DNS challenge — your Caddy binary must be built
+# with the caddy-dns/cloudflare module. See docs/deployment.md for the
+# xcaddy build instructions. CADDY_DOMAIN and CF_API_TOKEN are read from
+# /etc/haven/.env via systemd (caddy.service inherits via /etc/default/caddy
+# if you wire it in, OR set them in /etc/caddy/Caddyfile directly).
+
+{
+	# Global options
+	email admin@{$CADDY_DOMAIN}
+	# Use Cloudflare DNS challenge for the cert. Falls back to HTTP-01
+	# only works if you port-forward 80; DNS challenge needs no inbound.
+	# acme_dns cloudflare {$CF_API_TOKEN}
+}
+
+{$CADDY_DOMAIN} {
+	encode gzip zstd
+
+	# Per-site TLS (uncomment after the cloudflare module is installed).
+	# tls {
+	# 	dns cloudflare {$CF_API_TOKEN}
+	# }
+
+	# Backend REST + SSE
+	handle /api/* {
+		reverse_proxy 127.0.0.1:8080
+	}
+
+	# Static attachments served directly from disk
+	handle /attachments/* {
+		root * /var/haven
+		file_server
+		# TODO: require auth header (Authelia / device token) before serving
+	}
+
+	# Everything else → dashboard SSR
+	handle {
+		reverse_proxy 127.0.0.1:3000
+	}
+
+	# Useful log for debugging
+	log {
+		output file /var/log/caddy/haven.log {
+			roll_size 10MB
+			roll_keep 5
+		}
+		format json
+	}
+}

@@ -1,0 +1,28 @@
+[Unit]
+Description=Haven backend (Hono on Bun)
+Documentation=https://github.com/michael/haven
+After=network-online.target docker.service
+Wants=network-online.target
+Requires=docker.service
+
+[Service]
+Type=simple
+User=haven
+Group=haven
+WorkingDirectory=/opt/haven/apps/backend
+EnvironmentFile=/etc/haven/.env
+ExecStart=/usr/local/bin/bun run src/index.ts
+Restart=on-failure
+RestartSec=5s
+StandardOutput=journal
+StandardError=journal
+
+# Sandboxing — the backend reads /opt/haven and writes /var/haven only.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/haven
+
+[Install]
+WantedBy=multi-user.target

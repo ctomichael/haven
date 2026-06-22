@@ -1,0 +1,12 @@
+[Unit]
+Description=Haven autopull — git fetch + deploy if HEAD changed
+Documentation=https://github.com/michael/haven
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/opt/haven/infra/autopull.sh
+StandardOutput=journal
+StandardError=journal
+TimeoutStartSec=10min

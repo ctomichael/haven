@@ -1,0 +1,190 @@
+#!/bin/sh
+# Haven — idempotent installer for Ubuntu/Debian on the Beelink.
+#
+# Designed to run as root (or via sudo). Re-running is safe: every step
+# is gated on a presence check or otherwise idempotent. Output goes to
+# stdout; on a fresh box first run takes ~3–5 minutes.
+#
+# Steps:
+#   1.  Verify environment (root, Linux, repo location)
+#   2.  Apt: base packages
+#   3.  Bun (system-wide at /usr/local/bun)
+#   4.  Docker engine
+#   5.  Node + squawk-cli (for migration safety lint)
+#   6.  Caddy (base apt — Cloudflare DNS module is a separate step;
+#       see docs/deployment.md)
+#   7.  haven system user + /var/haven/{attachments,backups}
+#   8.  /etc/haven/.env from template
+#   9.  Repo ownership + bun install --frozen-lockfile
+#   10. Postgres container up + healthy + migrations applied
+#   11. Build dashboard
+#   12. Install systemd units + timer
+#   13. Install /etc/caddy/Caddyfile from template
+#   14. Print next-steps banner
+
+set -eu
+
+REPO_DIR="${HAVEN_REPO_DIR:-/opt/haven}"
+ENV_FILE="${HAVEN_ENV_FILE:-/etc/haven/.env}"
+HAVEN_USER="${HAVEN_USER:-haven}"
+HAVEN_DATA_DIR="${HAVEN_DATA_DIR:-/var/haven}"
+BUN_HOME="${BUN_HOME:-/usr/local/bun}"
+
+log() { printf '\033[1;34m[haven-install]\033[0m %s\n' "$*"; }
+warn() { printf '\033[1;33m[haven-install]\033[0m %s\n' "$*" >&2; }
+die() { printf '\033[1;31m[haven-install]\033[0m %s\n' "$*" >&2; exit 1; }
+
+# ---- 1. Environment checks ------------------------------------------------
+
+[ "$(id -u)" -eq 0 ] || die "Run as root (use sudo)."
+[ "$(uname -s)" = "Linux" ] || die "install.sh targets Linux (Beelink Ubuntu)."
+[ -d "$REPO_DIR" ] || die "Repo not found at $REPO_DIR. Clone first, then re-run."
+[ -f "$REPO_DIR/package.json" ] || die "$REPO_DIR doesn't look like the Haven repo."
+
+# ---- 2. Apt base ----------------------------------------------------------
+
+log "Updating apt + base packages"
+export DEBIAN_FRONTEND=noninteractive
+apt-get update -qq
+apt-get install -qq -y \
+  ca-certificates curl git make build-essential \
+  gnupg lsb-release apt-transport-https debian-keyring debian-archive-keyring
+
+# ---- 3. Bun ---------------------------------------------------------------
+
+if [ ! -x "$BUN_HOME/bin/bun" ]; then
+  log "Installing Bun system-wide at $BUN_HOME"
+  curl -fsSL https://bun.sh/install | BUN_INSTALL="$BUN_HOME" sh
+fi
+ln -sf "$BUN_HOME/bin/bun" /usr/local/bin/bun
+ln -sf "$BUN_HOME/bin/bunx" /usr/local/bin/bunx
+
+# ---- 4. Docker ------------------------------------------------------------
+
+if ! command -v docker >/dev/null 2>&1; then
+  log "Installing Docker engine"
+  curl -fsSL https://get.docker.com | sh
+fi
+systemctl enable --now docker >/dev/null
+
+# ---- 5. Node + squawk-cli -------------------------------------------------
+
+if ! command -v node >/dev/null 2>&1; then
+  log "Installing Node.js 20 (needed for squawk-cli)"
+  curl -fsSL https://deb.nodesource.com/setup_20.x | bash - >/dev/null
+  apt-get install -qq -y nodejs
+fi
+if ! command -v squawk >/dev/null 2>&1; then
+  log "Installing squawk-cli globally"
+  npm install -g squawk-cli >/dev/null
+fi
+
+# ---- 6. Caddy (base) ------------------------------------------------------
+
+if ! command -v caddy >/dev/null 2>&1; then
+  log "Installing Caddy (base) from official apt repo"
+  curl -fsSL https://dl.cloudsmith.io/public/caddy/stable/gpg.key \
+    | gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+  curl -fsSL https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt \
+    > /etc/apt/sources.list.d/caddy-stable.list
+  apt-get update -qq
+  apt-get install -qq -y caddy
+  warn "Caddy installed without the Cloudflare DNS module."
+  warn "For TLS via DNS challenge, follow docs/deployment.md (xcaddy build)."
+fi
+
+# ---- 7. haven user + dirs -------------------------------------------------
+
+if ! id "$HAVEN_USER" >/dev/null 2>&1; then
+  log "Creating system user '$HAVEN_USER'"
+  useradd --system --shell /bin/false --home "$HAVEN_DATA_DIR" "$HAVEN_USER"
+fi
+mkdir -p "$HAVEN_DATA_DIR/attachments" "$HAVEN_DATA_DIR/backups"
+chown -R "$HAVEN_USER:$HAVEN_USER" "$HAVEN_DATA_DIR"
+
+# Allow haven user to talk to docker (Postgres container management)
+if getent group docker >/dev/null && ! id -nG "$HAVEN_USER" | grep -qw docker; then
+  usermod -aG docker "$HAVEN_USER"
+fi
+
+# ---- 8. /etc/haven/.env ---------------------------------------------------
+
+mkdir -p "$(dirname "$ENV_FILE")"
+if [ ! -f "$ENV_FILE" ]; then
+  log "Installing $ENV_FILE from template"
+  cp "$REPO_DIR/infra/env.example" "$ENV_FILE"
+  chown root:"$HAVEN_USER" "$ENV_FILE"
+  chmod 640 "$ENV_FILE"
+  warn "Edit $ENV_FILE — set CADDY_DOMAIN, CF_API_TOKEN, etc., then restart services."
+fi
+
+# ---- 9. Repo perms + deps -------------------------------------------------
+
+log "Setting repo ownership and installing workspace deps"
+chown -R "$HAVEN_USER:$HAVEN_USER" "$REPO_DIR"
+sudo -u "$HAVEN_USER" -H sh -c "cd '$REPO_DIR' && /usr/local/bin/bun install --frozen-lockfile"
+
+# ---- 10. Postgres up + migrations ----------------------------------------
+
+log "Bringing Postgres up"
+sudo -u "$HAVEN_USER" -H sh -c "cd '$REPO_DIR' && docker compose up -d postgres"
+i=0
+while ! sudo -u "$HAVEN_USER" -H sh -c "cd '$REPO_DIR' && docker compose exec -T postgres pg_isready -U haven -d haven" >/dev/null 2>&1; do
+  i=$((i + 1))
+  [ "$i" -lt 60 ] || die "Postgres failed to become ready in 60s."
+  sleep 1
+done
+log "Postgres ready — applying safe migrations"
+sudo -u "$HAVEN_USER" -H sh -c "cd '$REPO_DIR/apps/backend' && /usr/local/bin/bun run db:migrate"
+
+# ---- 11. Build dashboard --------------------------------------------------
+
+log "Building dashboard"
+sudo -u "$HAVEN_USER" -H sh -c "cd '$REPO_DIR' && /usr/local/bin/bun --filter @haven/dashboard run build"
+
+# ---- 12. systemd units ----------------------------------------------------
+
+log "Installing systemd units"
+cp "$REPO_DIR/infra/systemd/"*.service /etc/systemd/system/
+cp "$REPO_DIR/infra/systemd/"*.timer /etc/systemd/system/
+systemctl daemon-reload
+systemctl enable haven-backend.service haven-dashboard.service haven-autopull.timer >/dev/null
+systemctl restart haven-backend.service haven-dashboard.service
+systemctl start haven-autopull.timer
+
+# ---- 13. Caddyfile --------------------------------------------------------
+
+mkdir -p /etc/caddy
+if [ ! -f /etc/caddy/Caddyfile ] || ! grep -q '# managed by haven-install' /etc/caddy/Caddyfile 2>/dev/null; then
+  log "Installing /etc/caddy/Caddyfile from template"
+  {
+    echo '# managed by haven-install — edit then `systemctl reload caddy`'
+    cat "$REPO_DIR/infra/Caddyfile.example"
+  } > /etc/caddy/Caddyfile
+fi
+systemctl reload caddy 2>/dev/null || systemctl restart caddy
+
+# ---- 14. Banner -----------------------------------------------------------
+
+cat <<EOF
+
+\033[1;32m✔\033[0m Haven base install complete.
+
+Repo:        $REPO_DIR
+Env:         $ENV_FILE
+Data:        $HAVEN_DATA_DIR
+User:        $HAVEN_USER
+Services:    haven-backend, haven-dashboard, haven-autopull.timer
+Caddy:       /etc/caddy/Caddyfile
+
+Next steps:
+  1. Edit $ENV_FILE — set CADDY_DOMAIN, CF_API_TOKEN, DATABASE_URL, etc.
+  2. (If using DNS challenge for TLS) Rebuild Caddy with the Cloudflare
+     module — see docs/deployment.md "Caddy + Cloudflare DNS" section.
+  3. systemctl restart haven-backend haven-dashboard caddy
+  4. Visit https://\$CADDY_DOMAIN
+
+Logs:        journalctl -u haven-backend -u haven-dashboard -u caddy -f
+Health:      curl -s http://127.0.0.1:8080/api/health | jq
+
+EOF

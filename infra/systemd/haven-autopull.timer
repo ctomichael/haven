@@ -1,0 +1,13 @@
+[Unit]
+Description=Run haven-autopull every 4 hours
+Documentation=https://github.com/michael/haven
+
+[Timer]
+# Fire 10 min after boot, then every 4h while the timer is active.
+OnBootSec=10min
+OnUnitActiveSec=4h
+Persistent=true
+RandomizedDelaySec=2min
+
+[Install]
+WantedBy=timers.target

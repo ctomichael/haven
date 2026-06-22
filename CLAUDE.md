@@ -81,6 +81,31 @@ bun --filter @haven/backend dev
 bun --filter @haven/dashboard dev
 ```
 
+## Deployment notes (when running on the Beelink)
+
+If you're invoked on the production server (Beelink Ubuntu VM), the
+repo lives at `/opt/haven`, runs as the `haven` system user, and is
+managed by systemd. Key paths and commands:
+
+```
+/opt/haven                 The repo (this directory)
+/var/haven/attachments     User-uploaded files served by Caddy
+/var/haven/backups         Nightly pg_dump output
+/etc/haven/.env            Runtime env (DATABASE_URL, CADDY_DOMAIN, etc.) — NEVER commit
+/etc/caddy/Caddyfile       Reverse proxy + TLS
+
+systemctl status haven-backend haven-dashboard haven-autopull.timer
+journalctl -u haven-backend -u haven-dashboard -f
+sudo make deploy           git pull + bun install + migrate + build + restart
+sudo make backup-db        pg_dump to /var/haven/backups
+```
+
+After dispatching a widget commit you do NOT need to call `make deploy`:
+the file watcher rebuilds on commit, and `dashboard_reload` via MCP
+pushes the SSE refresh. `make deploy` is for pulled-from-laptop changes.
+
+See [`docs/deployment.md`](docs/deployment.md) for the full picture.
+
 ## When to ask vs act
 
 In this repo, prefer to **act** — the plan envelope you receive is the contract. If anything in the plan conflicts with the rules in this file, the rules win and you should return an error. Don't add scope ("while I'm in here…") beyond the plan; that's how widget commits become unreviewable.
