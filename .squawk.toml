@@ -7,7 +7,13 @@
 excluded_rules = [
   "prefer-text-field",
   "prefer-timestamptz",
-  "prefer-big-int",
+  "prefer-bigint-over-int",
   "prefer-identity",
   "prefer-robust-stmts",
+  # CREATE INDEX CONCURRENTLY cannot run inside a transaction, and our
+  # migrator runs every migration inside a transaction (atomic rollback
+  # on failure). For migrations that genuinely need it (an index on a
+  # large populated table), author them as an unsafe migration and apply
+  # via `bun run db:migrate:unsafe` after read-and-confirm.
+  "require-concurrent-index-creation",
 ]
