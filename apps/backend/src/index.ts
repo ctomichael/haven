@@ -6,6 +6,7 @@ import { streamSSE } from 'hono/streaming';
 import { pingDb } from './db/client.ts';
 import { migrate, status as migrationStatus } from './db/migrator.ts';
 import { squawkAvailable } from './db/squawk.ts';
+import inboxRoute from './routes/inbox.ts';
 
 const PORT = Number(process.env.PORT ?? 8080);
 const STARTED_AT = new Date().toISOString();
@@ -46,6 +47,8 @@ app.use('*', logger());
 app.use('/api/*', cors({ origin: ['http://localhost:5173', 'http://localhost:4173'] }));
 
 app.get('/', (c) => c.text('Haven backend — see /api/health'));
+
+app.route('/api/inbox', inboxRoute);
 
 app.get('/api/health', async (c) => {
   const [db, migrations, squawk] = await Promise.all([
