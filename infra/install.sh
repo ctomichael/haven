@@ -79,6 +79,37 @@ if ! command -v squawk >/dev/null 2>&1; then
   npm install -g squawk-cli >/dev/null
 fi
 
+# ---- 5b. ffmpeg + whisper.cpp (voice transcription) ---------------------
+
+apt-get install -qq -y ffmpeg
+
+WHISPER_SRC="${WHISPER_SRC:-/opt/whisper.cpp}"
+WHISPER_MODEL_DIR="${WHISPER_MODEL_DIR:-/opt/whisper-models}"
+WHISPER_MODEL_FILE="$WHISPER_MODEL_DIR/ggml-base.en.bin"
+
+if ! command -v whisper-cli >/dev/null 2>&1; then
+  log "Building whisper.cpp from source (~3 min)"
+  if [ ! -d "$WHISPER_SRC" ]; then
+    git clone --depth 1 https://github.com/ggerganov/whisper.cpp "$WHISPER_SRC"
+  fi
+  (cd "$WHISPER_SRC" && make -j"$(nproc 2>/dev/null || echo 2)" whisper-cli >/dev/null)
+  # Recent whisper.cpp builds put binaries under build/bin/; older ones at root.
+  if [ -x "$WHISPER_SRC/build/bin/whisper-cli" ]; then
+    ln -sf "$WHISPER_SRC/build/bin/whisper-cli" /usr/local/bin/whisper-cli
+  elif [ -x "$WHISPER_SRC/whisper-cli" ]; then
+    ln -sf "$WHISPER_SRC/whisper-cli" /usr/local/bin/whisper-cli
+  else
+    warn "whisper-cli binary not found after build — check $WHISPER_SRC"
+  fi
+fi
+
+if [ ! -f "$WHISPER_MODEL_FILE" ]; then
+  log "Downloading whisper base.en model (~145 MB)"
+  mkdir -p "$WHISPER_MODEL_DIR"
+  curl -fsSL -o "$WHISPER_MODEL_FILE" \
+    https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.en.bin
+fi
+
 # ---- 6. Caddy (base) ------------------------------------------------------
 
 if ! command -v caddy >/dev/null 2>&1; then

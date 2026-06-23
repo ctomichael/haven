@@ -11,6 +11,21 @@
   let penHandle: PenHandle | null = $state(null);
   let saving = $state(false);
 
+  type VoiceAttachment = { id: string; url: string; mime: string; size_bytes: number };
+  let voiceAttachments = $state<VoiceAttachment[]>([]);
+
+  // --- Hold-to-speak recording state ---
+  let recording = $state(false);
+  let transcribing = $state(false);
+  let recordingSeconds = $state(0);
+  let voiceError = $state<string | null>(null);
+  let mediaRecorder: MediaRecorder | null = null;
+  let micStream: MediaStream | null = null;
+  let recordChunks: Blob[] = [];
+  let recordMime = 'audio/webm';
+  let recordTickHandle: ReturnType<typeof setInterval> | null = null;
+  let recordStartTs = 0;
+
   let suggestions = ['HOME', 'KIDS', 'ERRANDS', 'WORK'];
   let selected = $state('HOME');
 
@@ -26,13 +41,123 @@
     }
   });
 
+  // ----- Hold to speak -------------------------------------------------
+
+  function pickMime(): string {
+    const candidates = [
+      'audio/webm;codecs=opus',
+      'audio/webm',
+      'audio/ogg;codecs=opus',
+      'audio/mp4',
+    ];
+    for (const m of candidates) {
+      if (typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported(m)) return m;
+    }
+    return 'audio/webm';
+  }
+
+  function stopMic() {
+    if (micStream) {
+      micStream.getTracks().forEach((t) => t.stop());
+      micStream = null;
+    }
+  }
+
+  async function startRecording() {
+    if (recording || transcribing) return;
+    voiceError = null;
+    try {
+      micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch (e) {
+      voiceError = e instanceof Error ? e.message : 'mic permission denied';
+      return;
+    }
+    recordChunks = [];
+    recordMime = pickMime();
+    try {
+      mediaRecorder = new MediaRecorder(micStream, { mimeType: recordMime });
+    } catch {
+      // Some Chromium builds don't accept the option; retry default.
+      mediaRecorder = new MediaRecorder(micStream);
+      recordMime = mediaRecorder.mimeType || 'audio/webm';
+    }
+    mediaRecorder.ondataavailable = (e) => {
+      if (e.data && e.data.size > 0) recordChunks.push(e.data);
+    };
+    mediaRecorder.onstop = async () => {
+      const blob = new Blob(recordChunks, { type: recordMime });
+      stopMic();
+      if (blob.size < 800) {
+        // Likely an accidental tap — drop it
+        return;
+      }
+      await uploadAndTranscribe(blob);
+    };
+    mediaRecorder.start();
+    recording = true;
+    recordStartTs = Date.now();
+    recordingSeconds = 0;
+    recordTickHandle = setInterval(() => {
+      recordingSeconds = Math.floor((Date.now() - recordStartTs) / 1000);
+    }, 100);
+  }
+
+  function stopRecording() {
+    if (!recording) return;
+    recording = false;
+    if (recordTickHandle) {
+      clearInterval(recordTickHandle);
+      recordTickHandle = null;
+    }
+    try {
+      mediaRecorder?.stop();
+    } catch {
+      stopMic();
+    }
+  }
+
+  async function uploadAndTranscribe(blob: Blob) {
+    transcribing = true;
+    try {
+      const ext = recordMime.includes('webm')
+        ? '.webm'
+        : recordMime.includes('ogg')
+          ? '.ogg'
+          : recordMime.includes('mp4')
+            ? '.m4a'
+            : '.bin';
+      const form = new FormData();
+      form.append('file', blob, `voice-${Date.now()}${ext}`);
+      const res = await fetch('/api/voice/transcribe', { method: 'POST', body: form });
+      if (!res.ok) {
+        voiceError = `transcribe failed: HTTP ${res.status}`;
+        return;
+      }
+      const result = (await res.json()) as {
+        text: string;
+        attachment: VoiceAttachment;
+      };
+      voiceAttachments = [...voiceAttachments, result.attachment];
+      const text = result.text.trim();
+      if (text) {
+        draft = draft.trim() ? `${draft.trim()} ${text}` : text;
+        // Show the transcript so the user can edit it before saving
+        mode = 'type';
+      }
+    } catch (e) {
+      voiceError = e instanceof Error ? e.message : 'transcription error';
+    } finally {
+      transcribing = false;
+    }
+  }
+
   async function save() {
     if (saving) return;
     saving = true;
 
     let rawText = draft.trim();
     type Attachment = { id: string; url: string; mime: string; size_bytes: number };
-    const attachments: Attachment[] = [];
+    const attachments: Attachment[] = [...voiceAttachments];
 
     if (mode === 'draw' && penHandle && !penHandle.isEmpty()) {
       const blob = await penHandle.getBlob('image/png');
@@ -141,15 +266,33 @@
 
   <footer>
     <div class="left">
-      <button type="button" class="mic" aria-label="Hold to speak">
+      <button
+        type="button"
+        class="mic"
+        class:rec={recording}
+        aria-label="Hold to speak"
+        onpointerdown={(e) => { e.preventDefault(); void startRecording(); }}
+        onpointerup={stopRecording}
+        onpointercancel={stopRecording}
+        onpointerleave={stopRecording}
+      >
         <Mic size={32} strokeWidth={2.5} />
-        Hold to speak
+        {#if transcribing}
+          Transcribing…
+        {:else if recording}
+          Recording · {recordingSeconds}s
+        {:else}
+          Hold to speak
+        {/if}
       </button>
       <button type="button" class="photo" aria-label="Add photo">
         <ImageIcon size={28} strokeWidth={2.5} />
         Photo
       </button>
     </div>
+    {#if voiceError}
+      <span class="voice-error">{voiceError}</span>
+    {/if}
     <div class="right">
       <a class="cancel" href="/">Cancel</a>
       <button type="button" class="save" onclick={save} disabled={saving}>
@@ -356,6 +499,21 @@
     font-weight: 700;
     font-size: 14px;
     letter-spacing: 0.16em;
+    text-transform: uppercase;
+    touch-action: none;
+    user-select: none;
+  }
+  .mic.rec {
+    background: var(--ink);
+    color: var(--paper);
+  }
+  .voice-error {
+    margin-left: 12px;
+    font-family: var(--font-mono);
+    font-weight: 600;
+    font-size: 11px;
+    letter-spacing: 0.16em;
+    color: var(--accent-rust);
     text-transform: uppercase;
   }
   .photo {
