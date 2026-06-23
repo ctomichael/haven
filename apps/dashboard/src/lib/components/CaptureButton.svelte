@@ -42,13 +42,14 @@
   }
   .title {
     font-family: var(--font-serif);
-    font-weight: 500;
+    font-weight: 600;
     font-size: 42px;
     line-height: 1;
     color: var(--ink);
   }
   .sub {
     font-family: var(--font-mono);
+    font-weight: 600;
     font-size: 12px;
     letter-spacing: 0.18em;
     text-transform: uppercase;

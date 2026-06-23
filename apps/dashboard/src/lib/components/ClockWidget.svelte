@@ -31,7 +31,7 @@
 <style>
   .time {
     font-family: var(--font-mono);
-    font-weight: 500;
+    font-weight: 600;
     font-size: 104px;
     line-height: 0.9;
     letter-spacing: -0.03em;
@@ -40,7 +40,7 @@
   }
   .date {
     font-family: var(--font-serif);
-    font-weight: 400;
+    font-weight: 500;
     font-size: 29px;
     color: var(--ink);
     margin-top: 12px;

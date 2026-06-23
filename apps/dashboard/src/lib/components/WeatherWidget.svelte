@@ -60,7 +60,7 @@
   }
   .big-temp {
     font-family: var(--font-mono);
-    font-weight: 500;
+    font-weight: 600;
     font-size: 64px;
     line-height: 0.9;
     letter-spacing: -0.02em;
@@ -69,6 +69,7 @@
   }
   .label {
     font-family: var(--font-serif);
+    font-weight: 500;
     font-size: 24px;
     color: var(--ink);
   }
@@ -92,12 +93,14 @@
   }
   .dow {
     font-family: var(--font-mono);
+    font-weight: 600;
     font-size: 13px;
     letter-spacing: 0.2em;
     color: var(--ink);
   }
   .hi-lo {
     font-family: var(--font-mono);
+    font-weight: 500;
     font-size: 24px;
     color: var(--ink);
     font-variant-numeric: tabular-nums;
@@ -107,6 +110,7 @@
   }
   .cond {
     font-family: var(--font-sans);
+    font-weight: 500;
     font-size: 15px;
     color: var(--ink-2);
   }

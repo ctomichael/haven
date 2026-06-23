@@ -54,6 +54,7 @@
   }
   .meta {
     font-family: var(--font-mono);
+    font-weight: 600;
     font-size: 12px;
     letter-spacing: 0.18em;
     color: var(--ink);

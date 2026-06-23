@@ -64,7 +64,7 @@
       <CalendarToday events={dummy.calendar} />
     </div>
     <div class="cell todo">
-      <TodoList todos={dummy.todos} />
+      <TodoList todos={dummy.todos} total={12} />
     </div>
     <div class="cell shopping">
       <ShoppingList items={dummy.shopping.items} moreCount={dummy.shopping.moreCount} />
@@ -110,7 +110,7 @@
   }
   .title {
     font-family: var(--font-serif);
-    font-weight: 500;
+    font-weight: 600;
     font-size: 34px;
     line-height: 0.9;
     letter-spacing: 0.01em;
@@ -118,6 +118,7 @@
   }
   .subtitle {
     font-family: var(--font-mono);
+    font-weight: 600;
     font-size: 12px;
     letter-spacing: 0.26em;
     color: var(--ink-2);
@@ -125,6 +126,7 @@
   }
   .meta {
     font-family: var(--font-mono);
+    font-weight: 600;
     font-size: 13px;
     letter-spacing: 0.18em;
     color: var(--ink);

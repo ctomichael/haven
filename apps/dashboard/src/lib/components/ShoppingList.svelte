@@ -7,9 +7,12 @@
     moreCount = 0,
     onOpen,
   }: { items: ShoppingItem[]; moreCount?: number; onOpen?: () => void } = $props();
+
+  let total = $derived(items.length + moreCount);
+  let meta = $derived(`${total} ITEMS`);
 </script>
 
-<WidgetFrame title="Shopping" action onAction={onOpen}>
+<WidgetFrame title="Shopping" {meta} action onAction={onOpen}>
   <ul class="list">
     {#each items as s (s.id)}
       <li class="row">
@@ -43,21 +46,25 @@
     width: 8px;
     height: 8px;
     background: var(--ink);
+    border-radius: 50%;
     display: inline-block;
   }
   .name {
     font-family: var(--font-sans);
+    font-weight: 500;
     font-size: 20px;
     color: var(--ink);
   }
   .qty {
     font-family: var(--font-mono);
+    font-weight: 500;
     font-size: 18px;
     color: var(--muted-mono);
     font-variant-numeric: tabular-nums;
   }
   .more {
     font-family: var(--font-mono);
+    font-weight: 600;
     font-size: 12px;
     letter-spacing: 0.18em;
     color: var(--muted-mono);

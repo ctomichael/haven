@@ -67,7 +67,7 @@
     align-items: center;
     gap: 9px;
     font-family: var(--font-sans);
-    font-weight: 600;
+    font-weight: 700;
     font-size: 14px;
     letter-spacing: 0.16em;
     text-transform: uppercase;
@@ -84,15 +84,18 @@
   }
   .meta {
     font-family: var(--font-mono);
+    font-weight: 500;
     font-size: 13px;
     letter-spacing: 0.18em;
     color: var(--ink);
+    text-transform: uppercase;
   }
   .live-pill {
     display: inline-flex;
     align-items: center;
     gap: 7px;
     font-family: var(--font-mono);
+    font-weight: 500;
     font-size: 11px;
     letter-spacing: 0.2em;
     color: var(--ink);

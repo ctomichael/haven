@@ -7,8 +7,9 @@
 
   let {
     todos: initialTodos,
+    total,
     onOpen,
-  }: { todos: Todo[]; onOpen?: () => void } = $props();
+  }: { todos: Todo[]; total?: number; onOpen?: () => void } = $props();
 
   // Snapshot the initial list — interactions live in-component until the
   // real repo writes back. untrack() makes the capture-once intent explicit.
@@ -17,6 +18,10 @@
   function toggle(id: string) {
     items = items.map((t) => (t.id === id ? { ...t, done: !t.done } : t));
   }
+
+  let doneCount = $derived(items.filter((t) => t.done).length);
+  let totalCount = $derived(total ?? items.length);
+  let meta = $derived(`${doneCount} OF ${totalCount}`);
 
   const categoryLabel = {
     sage:  'HOME',
@@ -27,7 +32,7 @@
   } as const;
 </script>
 
-<WidgetFrame title="To-do" action onAction={onOpen}>
+<WidgetFrame title="To-do" {meta} action onAction={onOpen}>
   <ul class="list">
     {#each items as t (t.id)}
       <li class="row" class:done={t.done}>
@@ -56,6 +61,7 @@
   }
   .title {
     font-family: var(--font-sans);
+    font-weight: 500;
     font-size: 20px;
     color: var(--ink);
     white-space: nowrap;

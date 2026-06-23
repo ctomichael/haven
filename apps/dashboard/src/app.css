@@ -3,6 +3,7 @@
 
 @import '@fontsource/newsreader/400.css';
 @import '@fontsource/newsreader/500.css';
+@import '@fontsource/newsreader/600.css';
 @import '@fontsource/newsreader/400-italic.css';
 @import '@fontsource/public-sans/400.css';
 @import '@fontsource/public-sans/500.css';
@@ -10,6 +11,7 @@
 @import '@fontsource/public-sans/700.css';
 @import '@fontsource/ibm-plex-mono/400.css';
 @import '@fontsource/ibm-plex-mono/500.css';
+@import '@fontsource/ibm-plex-mono/600.css';
 
 :root {
   /* Neutrals */
@@ -68,6 +70,7 @@ body {
   color: var(--ink);
   font-family: var(--font-sans);
   font-size: 20px;
+  font-weight: 500;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -101,7 +104,7 @@ body[data-surface='eink'] *::after {
 /* Type scale utilities — match design tokens. */
 .t-caption {
   font-family: var(--font-sans);
-  font-weight: 600;
+  font-weight: 700;
   font-size: 14px;
   line-height: 1.4;
   letter-spacing: 0.16em;
@@ -109,35 +112,36 @@ body[data-surface='eink'] *::after {
 }
 .t-body {
   font-family: var(--font-sans);
-  font-weight: 400;
+  font-weight: 500;
   font-size: 20px;
   line-height: 1.5;
 }
 .t-body-lg {
   font-family: var(--font-sans);
-  font-weight: 400;
+  font-weight: 500;
   font-size: 24px;
   line-height: 1.45;
 }
 .t-h3 {
   font-family: var(--font-serif);
-  font-weight: 500;
+  font-weight: 600;
   font-size: 32px;
   line-height: 1.2;
 }
 .t-h2 {
   font-family: var(--font-serif);
-  font-weight: 500;
+  font-weight: 600;
   font-size: 44px;
   line-height: 1.1;
 }
 .t-h1 {
   font-family: var(--font-serif);
-  font-weight: 500;
+  font-weight: 600;
   font-size: 60px;
   line-height: 1.05;
 }
 .t-mono {
   font-family: var(--font-mono);
+  font-weight: 500;
   font-variant-numeric: tabular-nums;
 }

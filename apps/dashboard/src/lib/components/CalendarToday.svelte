@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onMount, onDestroy } from 'svelte';
   import WidgetFrame from './WidgetFrame.svelte';
   import AccentDot from './AccentDot.svelte';
   import type { CalendarEvent } from '$lib/dummy';
@@ -7,9 +8,25 @@
     events,
     onOpen,
   }: { events: CalendarEvent[]; onOpen?: () => void } = $props();
+
+  let now = $state(new Date());
+  let timer: ReturnType<typeof setInterval> | undefined;
+
+  onMount(() => {
+    timer = setInterval(() => (now = new Date()), 60_000);
+  });
+  onDestroy(() => {
+    if (timer) clearInterval(timer);
+  });
+
+  let metaDate = $derived(
+    now
+      .toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'long' })
+      .toUpperCase(),
+  );
 </script>
 
-<WidgetFrame title="Today" action onAction={onOpen}>
+<WidgetFrame title="Today" meta={metaDate} action onAction={onOpen}>
   <ul class="list">
     {#each events as e (e.id)}
       <li class="row" class:past={e.past} class:next={e.isNext}>
@@ -62,7 +79,7 @@
   }
   .time {
     font-family: var(--font-mono);
-    font-weight: 500;
+    font-weight: 600;
     font-size: 20px;
     color: var(--ink);
   }
@@ -78,6 +95,7 @@
   }
   .title {
     font-family: var(--font-sans);
+    font-weight: 500;
     font-size: 20px;
     color: var(--ink);
     white-space: nowrap;
@@ -86,6 +104,7 @@
   }
   .sub {
     font-family: var(--font-mono);
+    font-weight: 500;
     font-size: 12px;
     letter-spacing: 0.18em;
     color: var(--muted-mono);
@@ -95,8 +114,8 @@
     background: var(--accent-amber-tint);
     color: var(--ink);
     font-family: var(--font-mono);
+    font-weight: 600;
     font-size: 11px;
-    font-weight: 500;
     letter-spacing: 0.18em;
     padding: 4px 8px;
   }
