@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
+  import { goto } from '$app/navigation';
 
   import DashboardGrid from '$lib/components/DashboardGrid.svelte';
   import Cell from '$lib/components/Cell.svelte';
@@ -63,16 +64,20 @@
       />
     </Cell>
 
-    <Cell w={5}><CalendarToday events={dummy.calendar} /></Cell>
-    <Cell w={4}><TodoList todos={dummy.todos} total={12} /></Cell>
+    <Cell w={5}><CalendarToday events={dummy.calendar} onOpen={() => goto('/calendar')} /></Cell>
+    <Cell w={4}><TodoList todos={dummy.todos} total={12} onOpen={() => goto('/todos')} /></Cell>
     <Cell w={3}>
-      <ShoppingList items={dummy.shopping.items} moreCount={dummy.shopping.moreCount} />
+      <ShoppingList
+        items={dummy.shopping.items}
+        moreCount={dummy.shopping.moreCount}
+        onOpen={() => goto('/shopping')}
+      />
     </Cell>
 
     <Cell w={2}><SensorTile sensor={dummy.sensors[0]} /></Cell>
     <Cell w={2}><SensorTile sensor={dummy.sensors[1]} /></Cell>
     <Cell w={2}><SensorTile sensor={dummy.sensors[2]} /></Cell>
-    <Cell w={6}><CaptureButton /></Cell>
+    <Cell w={6}><CaptureButton onclick={() => goto('/capture')} /></Cell>
   </DashboardGrid>
 
   <StatusBar
