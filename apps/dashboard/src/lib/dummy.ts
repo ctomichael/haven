@@ -87,6 +87,7 @@ export const dummy = {
   sensors: [
     { label: 'Living room', value: 21, unit: '°C', state: 'healthy' as const },
     { label: 'Bedroom',     value: 18, unit: '°C', state: 'warn' as const, warnText: 'Dry' },
+    { label: 'Kitchen',     value: 22, unit: '°C', state: 'healthy' as const },
   ] satisfies Sensor[],
   status: {
     online: true,

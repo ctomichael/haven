@@ -71,7 +71,8 @@
 
     <Cell w={2}><SensorTile sensor={dummy.sensors[0]} /></Cell>
     <Cell w={2}><SensorTile sensor={dummy.sensors[1]} /></Cell>
-    <Cell w={8}><CaptureButton /></Cell>
+    <Cell w={2}><SensorTile sensor={dummy.sensors[2]} /></Cell>
+    <Cell w={6}><CaptureButton /></Cell>
   </DashboardGrid>
 
   <StatusBar
