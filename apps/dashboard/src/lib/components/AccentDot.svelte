@@ -12,6 +12,7 @@
     width: var(--size);
     height: var(--size);
     background: var(--solid);
+    border-radius: 50%;
     flex-shrink: 0;
   }
 </style>

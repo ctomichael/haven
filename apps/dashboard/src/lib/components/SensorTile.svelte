@@ -11,11 +11,12 @@
     <span class="value">{sensor.value}</span>
     <span class="unit">{sensor.unit}</span>
   </div>
-  {#if sensor.state === 'warn' && sensor.warnText}
-    <div class="chip-wrap">
+  <div class="sub-row">
+    <span class="sub">Indoor temp</span>
+    {#if sensor.state === 'warn' && sensor.warnText}
       <AccentChip accent="amber" label={sensor.warnText} />
-    </div>
-  {/if}
+    {/if}
+  </div>
 </WidgetFrame>
 
 <style>
@@ -27,7 +28,7 @@
   .value {
     font-family: var(--font-mono);
     font-weight: 500;
-    font-size: 64px;
+    font-size: 52px;
     line-height: 0.9;
     letter-spacing: -0.02em;
     font-variant-numeric: tabular-nums;
@@ -35,10 +36,21 @@
   }
   .unit {
     font-family: var(--font-serif);
-    font-size: 28px;
+    font-size: 24px;
     color: var(--ink);
   }
-  .chip-wrap {
-    margin-top: 12px;
+  .sub-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-top: 8px;
+  }
+  .sub {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    letter-spacing: 0.18em;
+    color: var(--muted-mono);
+    text-transform: uppercase;
   }
 </style>

@@ -5,12 +5,14 @@
   let {
     title,
     live = false,
+    meta,
     action = false,
     onAction,
     children,
   }: {
     title: string;
     live?: boolean;
+    meta?: string;
     action?: boolean;
     onAction?: () => void;
     children: Snippet;
@@ -26,12 +28,17 @@
     {:else}
       <span class="title">{title}</span>
     {/if}
-    {#if live}
-      <span class="live-pill">
-        <span class="live-dot" aria-hidden="true"></span>
-        LIVE
-      </span>
-    {/if}
+    <span class="header-right">
+      {#if meta}
+        <span class="meta">{meta}</span>
+      {/if}
+      {#if live}
+        <span class="live-pill">
+          <span class="live-dot" aria-hidden="true"></span>
+          LIVE
+        </span>
+      {/if}
+    </span>
   </header>
   <div class="body">
     {@render children()}
@@ -70,6 +77,17 @@
     cursor: pointer;
   }
 
+  .header-right {
+    display: inline-flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .meta {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    letter-spacing: 0.18em;
+    color: var(--ink);
+  }
   .live-pill {
     display: inline-flex;
     align-items: center;
