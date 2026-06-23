@@ -9,6 +9,7 @@ import { squawkAvailable } from './db/squawk.ts';
 import inboxRoute from './routes/inbox.ts';
 import todosRoute from './routes/todos.ts';
 import shoppingRoute from './routes/shopping.ts';
+import { attachmentsUpload, attachmentsServe } from './routes/attachments.ts';
 
 const PORT = Number(process.env.PORT ?? 8080);
 const STARTED_AT = new Date().toISOString();
@@ -53,6 +54,8 @@ app.get('/', (c) => c.text('Haven backend — see /api/health'));
 app.route('/api/inbox', inboxRoute);
 app.route('/api/todos', todosRoute);
 app.route('/api/shopping', shoppingRoute);
+app.route('/api/attachments', attachmentsUpload);
+app.route('/attachments', attachmentsServe);
 
 app.get('/api/health', async (c) => {
   const [db, migrations, squawk] = await Promise.all([

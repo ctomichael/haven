@@ -12,6 +12,10 @@ export default defineConfig({
         changeOrigin: true,
         ws: false,
       },
+      '/attachments': {
+        target: BACKEND,
+        changeOrigin: true,
+      },
     },
   },
 });

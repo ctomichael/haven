@@ -1,30 +1,79 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
-  import { Mic, Image as ImageIcon, X as XIcon } from 'lucide-svelte';
+  import { Mic, Image as ImageIcon, X as XIcon, Eraser } from 'lucide-svelte';
   import AccentChip from '$lib/components/AccentChip.svelte';
+  import PenCanvas, { type PenHandle } from '$lib/components/PenCanvas.svelte';
+  import { uploadAttachment } from '$lib/api';
 
+  let mode = $state<'type' | 'draw'>('type');
   let draft = $state('');
+  let textareaEl: HTMLTextAreaElement | undefined = $state();
+  let penHandle: PenHandle | null = $state(null);
+  let saving = $state(false);
 
   let suggestions = ['HOME', 'KIDS', 'ERRANDS', 'WORK'];
   let selected = $state('HOME');
 
+  function chipAccent(s: string): 'sage' | 'amber' | 'stone' | 'sky' {
+    return s === 'HOME' ? 'sage' : s === 'KIDS' ? 'amber' : s === 'ERRANDS' ? 'stone' : 'sky';
+  }
+
+  // Autofocus textarea when entering type mode.
+  $effect(() => {
+    if (mode === 'type' && textareaEl) {
+      // microtask so DOM has updated
+      queueMicrotask(() => textareaEl?.focus());
+    }
+  });
+
   async function save() {
-    if (!draft.trim()) {
+    if (saving) return;
+    saving = true;
+
+    let rawText = draft.trim();
+    type Attachment = { id: string; url: string; mime: string; size_bytes: number };
+    const attachments: Attachment[] = [];
+
+    if (mode === 'draw' && penHandle && !penHandle.isEmpty()) {
+      const blob = await penHandle.getBlob('image/png');
+      if (blob) {
+        try {
+          const att = await uploadAttachment(blob, 'pen-note.png');
+          attachments.push({
+            id: att.id,
+            url: att.url,
+            mime: att.mime,
+            size_bytes: att.size_bytes,
+          });
+          if (!rawText) rawText = '[handwritten note — pending OCR]';
+        } catch {
+          saving = false;
+          return; // don't navigate on failure
+        }
+      }
+    }
+
+    if (!rawText && attachments.length === 0) {
       goto('/');
       return;
     }
+
     try {
       await fetch('/api/inbox', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
           source: 'wall',
-          raw_text: draft,
-          metadata: { proposedCategory: selected },
+          raw_text: rawText,
+          metadata: {
+            proposedCategory: selected,
+            attachments,
+            input_mode: mode,
+          },
         }),
       });
     } catch {
-      // For v0 we don't surface errors; the inbox is forgiving.
+      /* don't surface in v0; inbox is forgiving */
     }
     goto('/');
   }
@@ -36,15 +85,42 @@
     <a class="close" href="/" aria-label="Close"><XIcon size={28} strokeWidth={2.5} /></a>
   </header>
 
+  <div class="mode-row">
+    <div class="seg">
+      <button
+        type="button"
+        class:on={mode === 'type'}
+        onclick={() => (mode = 'type')}
+      >Type</button>
+      <button
+        type="button"
+        class:on={mode === 'draw'}
+        onclick={() => (mode = 'draw')}
+      >Draw</button>
+    </div>
+    {#if mode === 'draw'}
+      <button type="button" class="clear" onclick={() => penHandle?.clear()}>
+        <Eraser size={20} strokeWidth={2.5} />
+        Clear
+      </button>
+    {/if}
+  </div>
+
   <div class="draft">
     <span class="bar" aria-hidden="true"></span>
-    <!-- svelte-ignore a11y_autofocus -->
-    <textarea
-      bind:value={draft}
-      placeholder="What's on your mind?"
-      autofocus
-      spellcheck="false"
-    ></textarea>
+    <div class="surface">
+      <!-- svelte-ignore a11y_autofocus -->
+      <textarea
+        class:active={mode === 'type'}
+        bind:this={textareaEl}
+        bind:value={draft}
+        placeholder="What's on your mind?"
+        spellcheck="false"
+      ></textarea>
+      <div class="canvas-wrap" class:active={mode === 'draw'}>
+        <PenCanvas onReady={(h) => (penHandle = h)} />
+      </div>
+    </div>
   </div>
 
   <section class="hermes">
@@ -57,16 +133,7 @@
           class:on={selected === s}
           onclick={() => (selected = s)}
         >
-          <AccentChip
-            accent={s === 'HOME'
-              ? 'sage'
-              : s === 'KIDS'
-                ? 'amber'
-                : s === 'ERRANDS'
-                  ? 'stone'
-                  : 'sky'}
-            label={s}
-          />
+          <AccentChip accent={chipAccent(s)} label={s} />
         </button>
       {/each}
     </div>
@@ -85,7 +152,9 @@
     </div>
     <div class="right">
       <a class="cancel" href="/">Cancel</a>
-      <button type="button" class="save" onclick={save}>Save note</button>
+      <button type="button" class="save" onclick={save} disabled={saving}>
+        {saving ? 'Saving…' : 'Save note'}
+      </button>
     </div>
   </footer>
 </main>
@@ -136,9 +205,53 @@
     color: var(--ink);
   }
 
+  .mode-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+  .seg {
+    display: inline-flex;
+    border: var(--border-normal) solid var(--ink);
+  }
+  .seg button {
+    height: 48px;
+    padding: 0 24px;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    font-weight: 700;
+    font-size: 13px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    border: 0;
+    border-right: var(--border-normal) solid var(--ink);
+  }
+  .seg button:last-child { border-right: 0; }
+  .seg button.on {
+    background: var(--ink);
+    color: var(--paper);
+  }
+  .clear {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    height: 48px;
+    padding: 0 18px;
+    border: var(--border-normal) solid var(--ink);
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    font-weight: 700;
+    font-size: 13px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+  }
+
   .draft {
     flex: 1;
-    min-height: 200px;
+    min-height: 240px;
     display: flex;
     gap: 16px;
     padding: 4px 0;
@@ -149,20 +262,45 @@
     align-self: stretch;
     flex-shrink: 0;
   }
-  textarea {
+  .surface {
+    position: relative;
     flex: 1;
+    border: var(--border-normal) solid var(--hairline);
+    min-height: 240px;
+  }
+  textarea {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
     border: 0;
     outline: 0;
     resize: none;
+    padding: 12px;
     background: transparent;
     color: var(--ink);
     font-family: var(--font-serif);
     font-weight: 500;
     font-size: 40px;
     line-height: 1.2;
+    opacity: 0;
+    pointer-events: none;
   }
-  textarea::placeholder {
-    color: var(--muted-mono);
+  textarea.active {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  textarea::placeholder { color: var(--muted-mono); }
+
+  .canvas-wrap {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    pointer-events: none;
+  }
+  .canvas-wrap.active {
+    opacity: 1;
+    pointer-events: auto;
   }
 
   .hermes {
@@ -200,8 +338,7 @@
     border-top: var(--border-normal) solid var(--ink);
     padding-top: 16px;
   }
-  .left,
-  .right {
+  .left, .right {
     display: flex;
     align-items: center;
     gap: 16px;
@@ -263,4 +400,5 @@
     letter-spacing: 0.16em;
     text-transform: uppercase;
   }
+  .save:disabled { opacity: 0.6; }
 </style>

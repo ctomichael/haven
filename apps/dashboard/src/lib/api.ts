@@ -112,3 +112,27 @@ export async function patchShopping(
   if (!res.ok) throw new Error(`patchShopping failed: HTTP ${res.status}`);
   return (await res.json()) as ApiShoppingItem;
 }
+
+// ----- Attachments -----------------------------------------------------
+
+export type ApiAttachment = {
+  id: string;
+  url: string;
+  mime: string;
+  size_bytes: number;
+  created_at: string;
+};
+
+export async function uploadAttachment(
+  blob: Blob,
+  filename = 'upload.bin',
+): Promise<ApiAttachment> {
+  const form = new FormData();
+  form.append('file', blob, filename);
+  const res = await fetch('/api/attachments', {
+    method: 'POST',
+    body: form,
+  });
+  if (!res.ok) throw new Error(`uploadAttachment failed: HTTP ${res.status}`);
+  return (await res.json()) as ApiAttachment;
+}
