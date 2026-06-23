@@ -8,9 +8,15 @@
   import Cell from '$lib/components/Cell.svelte';
   import { Plus } from 'lucide-svelte';
   import { goto } from '$app/navigation';
-  import { dummy, type Todo } from '$lib/dummy';
+  import { patchTodo, todoAccent, type ApiTodo } from '$lib/api';
 
-  let items: Todo[] = $state(untrack(() => [...dummy.todosAll]));
+  let { data }: { data: { todos: ApiTodo[] } } = $props();
+
+  let items: ApiTodo[] = $state(untrack(() => [...data.todos]));
+  $effect(() => {
+    items = data.todos;
+  });
+
   let filter = $state<'all' | 'home' | 'errands' | 'kids'>('all');
 
   const accentToFilter = {
@@ -31,13 +37,21 @@
   let visible = $derived(
     filter === 'all'
       ? items
-      : items.filter((t) => accentToFilter[t.accent] === filter),
+      : items.filter((t) => accentToFilter[todoAccent(t)] === filter),
   );
   let doneCount = $derived(items.filter((t) => t.done).length);
   let meta = $derived(`${doneCount} OF ${items.length} DONE`);
 
-  function toggle(id: string) {
-    items = items.map((t) => (t.id === id ? { ...t, done: !t.done } : t));
+  async function toggle(id: string, nextDone: boolean) {
+    const prev = items;
+    items = items.map((t) =>
+      t.id === id ? { ...t, done: nextDone, done_at: nextDone ? new Date().toISOString() : null } : t,
+    );
+    try {
+      await patchTodo(id, { done: nextDone });
+    } catch {
+      items = prev;
+    }
   }
 </script>
 
@@ -55,13 +69,18 @@
     />
   </div>
 
+  {#if visible.length === 0}
+    <p class="empty">Nothing in this view.</p>
+  {/if}
+
   <DashboardGrid columns={2} rows="auto" autoRows="auto" rowGap={12} columnGap={20}>
     {#each visible as t (t.id)}
+      {@const accent = todoAccent(t)}
       <Cell w={1}>
         <div class="row" class:done={t.done}>
-          <Checkbox checked={t.done} onchange={() => toggle(t.id)} />
+          <Checkbox checked={t.done} onchange={() => toggle(t.id, !t.done)} />
           <span class="title">{t.title}</span>
-          <AccentChip accent={t.accent} label={categoryLabel[t.accent]} />
+          <AccentChip {accent} label={categoryLabel[accent]} />
         </div>
       </Cell>
     {/each}
@@ -76,6 +95,15 @@
 <style>
   .filters {
     padding-bottom: 6px;
+  }
+  .empty {
+    font-family: var(--font-mono);
+    font-weight: 600;
+    font-size: 13px;
+    letter-spacing: 0.18em;
+    color: var(--muted-mono);
+    text-transform: uppercase;
+    padding: 8px 0;
   }
   .row {
     display: grid;

@@ -1,21 +1,32 @@
 <script lang="ts">
   import WidgetFrame from './WidgetFrame.svelte';
-  import type { ShoppingItem } from '$lib/dummy';
+  import type { ApiShoppingItem } from '$lib/api';
 
+  /**
+   * Stateless dashboard shopping widget. Renders the visible slice; the
+   * parent passes the overall total for the meta line and a moreCount for
+   * the "+N more" footer.
+   */
   let {
     items,
+    total,
     moreCount = 0,
     onOpen,
-  }: { items: ShoppingItem[]; moreCount?: number; onOpen?: () => void } = $props();
+  }: {
+    items: ApiShoppingItem[];
+    total?: number;
+    moreCount?: number;
+    onOpen?: () => void;
+  } = $props();
 
-  let total = $derived(items.length + moreCount);
-  let meta = $derived(`${total} ITEMS`);
+  let totalCount = $derived(total ?? items.length + moreCount);
+  let meta = $derived(`${totalCount} ITEMS`);
 </script>
 
 <WidgetFrame title="Shopping" {meta} action onAction={onOpen}>
   <ul class="list">
     {#each items as s (s.id)}
-      <li class="row">
+      <li>
         <span class="dot" aria-hidden="true"></span>
         <span class="name">{s.name}</span>
         {#if s.qty}<span class="qty">{s.qty}</span>{/if}
@@ -36,7 +47,7 @@
     flex-direction: column;
     gap: 10px;
   }
-  .row {
+  li {
     display: grid;
     grid-template-columns: 16px 1fr auto;
     align-items: baseline;
@@ -63,6 +74,7 @@
     font-variant-numeric: tabular-nums;
   }
   .more {
+    display: block;
     font-family: var(--font-mono);
     font-weight: 600;
     font-size: 12px;

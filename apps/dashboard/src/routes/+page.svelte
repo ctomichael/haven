@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
   import { goto } from '$app/navigation';
+  import { untrack } from 'svelte';
 
   import DashboardGrid from '$lib/components/DashboardGrid.svelte';
   import Cell from '$lib/components/Cell.svelte';
@@ -15,6 +16,46 @@
   import StatusBar from '$lib/components/StatusBar.svelte';
 
   import { dummy } from '$lib/dummy';
+  import { patchTodo, type ApiTodo, type ApiShoppingItem } from '$lib/api';
+
+  let { data }: { data: { todos: ApiTodo[]; shopping: ApiShoppingItem[] } } = $props();
+
+  // Local live state — initialised from the load() data, mutated optimistically
+  // on toggle. SvelteKit re-runs load() on navigation, so we re-sync there too.
+  let todos: ApiTodo[] = $state(untrack(() => [...data.todos]));
+  let shopping: ApiShoppingItem[] = $state(untrack(() => [...data.shopping]));
+
+  $effect(() => {
+    // Re-sync when load() returns new data (e.g. nav back to /).
+    todos = data.todos;
+  });
+  $effect(() => {
+    shopping = data.shopping;
+  });
+
+  // Dashboard tile shows the top 5 open todos. Meta uses overall counts.
+  let openTodos = $derived(todos.filter((t) => !t.done).slice(0, 5));
+  let doneCount = $derived(todos.filter((t) => t.done).length);
+  let totalTodos = $derived(todos.length);
+
+  // Top 5 unbought shopping items; +N more shows remaining open.
+  let unboughtShopping = $derived(shopping.filter((s) => !s.bought));
+  let visibleShopping = $derived(unboughtShopping.slice(0, 5));
+  let moreShopping = $derived(Math.max(0, unboughtShopping.length - 5));
+
+  async function toggleTodo(id: string, nextDone: boolean) {
+    // Optimistic update
+    const prev = todos;
+    todos = todos.map((t) =>
+      t.id === id ? { ...t, done: nextDone, done_at: nextDone ? new Date().toISOString() : null } : t,
+    );
+    try {
+      await patchTodo(id, { done: nextDone });
+    } catch {
+      // Revert on failure
+      todos = prev;
+    }
+  }
 
   // Masthead meta — week-of-year · day-of-year. Refresh once a minute.
   let now = $state(new Date());
@@ -64,12 +105,23 @@
       />
     </Cell>
 
-    <Cell w={5}><CalendarToday events={dummy.calendar} onOpen={() => goto('/calendar')} /></Cell>
-    <Cell w={4}><TodoList todos={dummy.todos} total={12} onOpen={() => goto('/todos')} /></Cell>
+    <Cell w={5}>
+      <CalendarToday events={dummy.calendar} onOpen={() => goto('/calendar')} />
+    </Cell>
+    <Cell w={4}>
+      <TodoList
+        todos={openTodos}
+        done={doneCount}
+        total={totalTodos}
+        onToggle={toggleTodo}
+        onOpen={() => goto('/todos')}
+      />
+    </Cell>
     <Cell w={3}>
       <ShoppingList
-        items={dummy.shopping.items}
-        moreCount={dummy.shopping.moreCount}
+        items={visibleShopping}
+        total={shopping.length}
+        moreCount={moreShopping}
         onOpen={() => goto('/shopping')}
       />
     </Cell>

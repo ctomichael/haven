@@ -1,26 +1,31 @@
 <script lang="ts">
-  import { untrack } from 'svelte';
   import WidgetFrame from './WidgetFrame.svelte';
   import Checkbox from './Checkbox.svelte';
   import AccentChip from './AccentChip.svelte';
-  import type { Todo } from '$lib/dummy';
+  import { todoAccent, type ApiTodo } from '$lib/api';
 
+  /**
+   * Stateless dashboard todo widget. The parent owns the list (so toggles
+   * stay in sync with the API). `done` and `total` are the overall counts
+   * for the meta line; when omitted they're computed from `todos`.
+   */
   let {
-    todos: initialTodos,
+    todos,
+    done,
     total,
+    onToggle,
     onOpen,
-  }: { todos: Todo[]; total?: number; onOpen?: () => void } = $props();
+  }: {
+    todos: ApiTodo[];
+    done?: number;
+    total?: number;
+    onToggle?: (id: string, done: boolean) => void;
+    onOpen?: () => void;
+  } = $props();
 
-  // Snapshot the initial list — interactions live in-component until the
-  // real repo writes back. untrack() makes the capture-once intent explicit.
-  let items: Todo[] = $state(untrack(() => [...initialTodos]));
-
-  function toggle(id: string) {
-    items = items.map((t) => (t.id === id ? { ...t, done: !t.done } : t));
-  }
-
-  let doneCount = $derived(items.filter((t) => t.done).length);
-  let totalCount = $derived(total ?? items.length);
+  let computedDone = $derived(todos.filter((t) => t.done).length);
+  let totalCount = $derived(total ?? todos.length);
+  let doneCount = $derived(done ?? computedDone);
   let meta = $derived(`${doneCount} OF ${totalCount}`);
 
   const categoryLabel = {
@@ -34,11 +39,12 @@
 
 <WidgetFrame title="To-do" {meta} action onAction={onOpen}>
   <ul class="list">
-    {#each items as t (t.id)}
+    {#each todos as t (t.id)}
+      {@const accent = todoAccent(t)}
       <li class="row" class:done={t.done}>
-        <Checkbox checked={t.done} onchange={() => toggle(t.id)} />
+        <Checkbox checked={t.done} onchange={() => onToggle?.(t.id, !t.done)} />
         <span class="title">{t.title}</span>
-        <AccentChip accent={t.accent} label={categoryLabel[t.accent]} />
+        <AccentChip {accent} label={categoryLabel[accent]} />
       </li>
     {/each}
   </ul>
