@@ -18,7 +18,10 @@
   aria-pressed={on}
   aria-disabled={disabled}
   aria-label={label}
-  onclick={() => !disabled && onchange?.(!on)}
+  onclick={(e) => {
+    e.stopPropagation();
+    if (!disabled) onchange?.(!on);
+  }}
 >
   <span class="knob" aria-hidden="true"></span>
 </button>

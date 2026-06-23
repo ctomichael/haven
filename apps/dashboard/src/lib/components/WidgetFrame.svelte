@@ -17,17 +17,37 @@
     onAction?: () => void;
     children: Snippet;
   } = $props();
+
+  // The whole frame becomes the tappable target when `action` is set.
+  // Inner controls (Checkbox, Switch, etc.) must stopPropagation in
+  // their onclick so their taps don't bubble up and trigger navigation.
+  function handleClick() {
+    if (action && onAction) onAction();
+  }
+  function handleKey(e: KeyboardEvent) {
+    if (!action || !onAction) return;
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      onAction();
+    }
+  }
 </script>
 
-<section class="frame">
+<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
+<section
+  class="frame"
+  class:tappable={action}
+  role={action ? 'button' : null}
+  tabindex={action ? 0 : null}
+  aria-label={action ? `Open ${title}` : null}
+  onclick={action ? handleClick : undefined}
+  onkeydown={action ? handleKey : undefined}
+>
   <header>
-    {#if action}
-      <button class="title title-button" onclick={onAction}>
-        {title}<ChevronRight size={16} strokeWidth={2.5} />
-      </button>
-    {:else}
-      <span class="title">{title}</span>
-    {/if}
+    <span class="title">
+      {title}
+      {#if action}<ChevronRight size={16} strokeWidth={2.5} />{/if}
+    </span>
     <span class="header-right">
       {#if meta}
         <span class="meta">{meta}</span>
@@ -54,6 +74,13 @@
     border-top: var(--border-normal) solid var(--ink);
     min-height: 0;
   }
+  .tappable {
+    cursor: pointer;
+    outline-offset: 4px;
+  }
+  .tappable:focus-visible {
+    outline: var(--border-normal) solid var(--ink);
+  }
 
   header {
     display: flex;
@@ -72,9 +99,6 @@
     letter-spacing: 0.16em;
     text-transform: uppercase;
     color: var(--ink);
-  }
-  .title-button {
-    cursor: pointer;
   }
 
   .header-right {

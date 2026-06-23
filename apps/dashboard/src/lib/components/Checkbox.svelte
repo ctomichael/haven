@@ -12,7 +12,10 @@
   class="cb"
   role="checkbox"
   aria-checked={checked}
-  onclick={() => onchange?.(!checked)}
+  onclick={(e) => {
+    e.stopPropagation();
+    onchange?.(!checked);
+  }}
 >
   <span class="box" class:checked>
     {#if checked}
