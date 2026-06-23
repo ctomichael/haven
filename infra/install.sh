@@ -11,6 +11,8 @@
 #   3.  Bun (system-wide at /usr/local/bun)
 #   4.  Docker engine
 #   5.  Node + squawk-cli (for migration safety lint)
+#   5b. ffmpeg + whisper.cpp built from source + ggml-base.en model
+#       (powers /api/voice/transcribe — first build ~3 min)
 #   6.  Caddy (base apt — Cloudflare DNS module is a separate step;
 #       see docs/deployment.md)
 #   7.  haven system user + /var/haven/{attachments,backups}
@@ -207,6 +209,8 @@ Data:        $HAVEN_DATA_DIR
 User:        $HAVEN_USER
 Services:    haven-backend, haven-dashboard, haven-autopull.timer
 Caddy:       /etc/caddy/Caddyfile
+Whisper:     $(command -v whisper-cli || echo MISSING) (model: $WHISPER_MODEL_FILE)
+ffmpeg:      $(command -v ffmpeg || echo MISSING)
 
 Next steps:
   1. Edit $ENV_FILE — set CADDY_DOMAIN, CF_API_TOKEN, DATABASE_URL, etc.
@@ -217,5 +221,7 @@ Next steps:
 
 Logs:        journalctl -u haven-backend -u haven-dashboard -u caddy -f
 Health:      curl -s http://127.0.0.1:8080/api/health | jq
+Voice test:  say "hello world" | ffmpeg -i pipe:0 -c:a libopus /tmp/t.webm \\
+             && curl -F file=@/tmp/t.webm http://127.0.0.1:8080/api/voice/transcribe
 
 EOF

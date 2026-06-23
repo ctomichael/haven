@@ -27,6 +27,8 @@ Three long-running services + a 4h timer + a Postgres container.
 | haven-dashboard      | 3000      | SvelteKit SSR via adapter-node         |
 | caddy                | 80, 443   | Public TLS edge → 8080 / 3000          |
 | postgres (docker)    | 5432      | pgvector/pgvector:pg16                 |
+| whisper-cli          | —         | Spawned by backend per transcription   |
+| ffmpeg               | —         | Spawned by backend (audio → 16 kHz WAV)|
 
 ## Prerequisites
 
@@ -55,9 +57,11 @@ Three long-running services + a 4h timer + a Postgres container.
    sudo ./infra/install.sh
    ```
 
-   This installs Bun, Docker, Node + squawk-cli, Caddy (base), creates
-   the `haven` system user, brings up Postgres, applies migrations,
-   builds the dashboard, installs systemd units, and starts everything.
+   This installs Bun, Docker, Node + squawk-cli, ffmpeg, whisper.cpp
+   (built from source — first run ~3 min) with the `ggml-base.en`
+   model, and Caddy (base). It then creates the `haven` system user,
+   brings up Postgres, applies migrations, builds the dashboard,
+   installs systemd units, and starts everything.
 
 3. **Fill in `/etc/haven/.env`**:
 
@@ -219,6 +223,28 @@ journalctl -u haven-autopull -f      # Update timer
 docker compose -f /opt/haven/docker-compose.yml logs -f postgres
 ```
 
+## Voice transcription
+
+`/api/voice/transcribe` runs locally — no audio leaves the box.
+`infra/install.sh` builds whisper.cpp from source and downloads the
+`ggml-base.en` model (~145 MB) to `/opt/whisper-models/`. Defaults
+land in `/etc/haven/.env`:
+
+```
+WHISPER_BIN=/usr/local/bin/whisper-cli
+WHISPER_MODEL=/opt/whisper-models/ggml-base.en.bin
+FFMPEG_BIN=/usr/bin/ffmpeg
+```
+
+Swap to a bigger / smaller model by changing `WHISPER_MODEL` and
+restarting the backend. Reference cost on a small Beelink: base.en
+runs ~2–4× real time, small.en ~1× real time. Quick check:
+
+```bash
+curl -sS -X POST http://127.0.0.1:8080/api/voice/transcribe \
+  -F file=@/path/to/clip.webm
+```
+
 ## Cheat sheet
 
 | Action                              | Command                                              |
@@ -229,6 +255,7 @@ docker compose -f /opt/haven/docker-compose.yml logs -f postgres
 | Tail all logs                       | `journalctl -u haven-* -u caddy -f`                  |
 | Inspect Postgres                    | `make db-psql`                                       |
 | Run the MCP smoke test              | `sudo -u haven bun --filter @haven/mcp run smoke`    |
+| Quick voice transcribe test         | `curl -F file=@clip.webm 127.0.0.1:8080/api/voice/transcribe` |
 | Back up the DB                      | `sudo make backup-db`                                |
 | Restore from a dump                 | `sudo make restore-db BACKUP=path.sql.gz`            |
 | Restart everything                  | `sudo systemctl restart haven-backend haven-dashboard caddy` |
