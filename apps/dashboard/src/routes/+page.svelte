@@ -1,6 +1,9 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
 
+  import DashboardGrid from '$lib/components/DashboardGrid.svelte';
+  import Cell from '$lib/components/Cell.svelte';
+
   import ClockWidget from '$lib/components/ClockWidget.svelte';
   import WeatherWidget from '$lib/components/WeatherWidget.svelte';
   import CalendarToday from '$lib/components/CalendarToday.svelte';
@@ -49,31 +52,27 @@
     <span class="meta">{mastheadMeta}</span>
   </header>
 
-  <section class="grid">
-    <div class="cell clock"><ClockWidget /></div>
-    <div class="cell weather">
+  <DashboardGrid columns={12} rows="200px 1fr 128px">
+    <Cell w={5}><ClockWidget /></Cell>
+    <Cell w={7}>
       <WeatherWidget
         city={dummy.weather.city}
         currentTemp={dummy.weather.currentTemp}
         currentLabel={dummy.weather.currentLabel}
         forecast={dummy.weather.forecast}
       />
-    </div>
+    </Cell>
 
-    <div class="cell calendar">
-      <CalendarToday events={dummy.calendar} />
-    </div>
-    <div class="cell todo">
-      <TodoList todos={dummy.todos} total={12} />
-    </div>
-    <div class="cell shopping">
+    <Cell w={5}><CalendarToday events={dummy.calendar} /></Cell>
+    <Cell w={4}><TodoList todos={dummy.todos} total={12} /></Cell>
+    <Cell w={3}>
       <ShoppingList items={dummy.shopping.items} moreCount={dummy.shopping.moreCount} />
-    </div>
+    </Cell>
 
-    <div class="cell sensor-a"><SensorTile sensor={dummy.sensors[0]} /></div>
-    <div class="cell sensor-b"><SensorTile sensor={dummy.sensors[1]} /></div>
-    <div class="cell capture"><CaptureButton /></div>
-  </section>
+    <Cell w={2}><SensorTile sensor={dummy.sensors[0]} /></Cell>
+    <Cell w={2}><SensorTile sensor={dummy.sensors[1]} /></Cell>
+    <Cell w={8}><CaptureButton /></Cell>
+  </DashboardGrid>
 
   <StatusBar
     online={dummy.status.online}
@@ -130,47 +129,5 @@
     font-size: 13px;
     letter-spacing: 0.18em;
     color: var(--ink);
-  }
-
-  .grid {
-    flex: 1;
-    min-height: 0;
-    display: grid;
-    grid-template-columns: repeat(12, 1fr);
-    grid-template-rows: 200px 1fr 128px;
-    gap: 28px 26px;
-  }
-
-  .clock     { grid-column: 1 / 6;  grid-row: 1; }
-  .weather   { grid-column: 6 / 13; grid-row: 1; }
-  .calendar  { grid-column: 1 / 6;  grid-row: 2; }
-  .todo      { grid-column: 6 / 10; grid-row: 2; }
-  .shopping  { grid-column: 10 / 13; grid-row: 2; }
-  .sensor-a  { grid-column: 1 / 3;  grid-row: 3; }
-  .sensor-b  { grid-column: 3 / 5;  grid-row: 3; }
-  .capture   { grid-column: 5 / 13; grid-row: 3; }
-
-  .cell {
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
-  }
-
-  /* Phone surface fallback — stack everything vertically on narrow viewports.
-   * Real phone PWA layout comes later. */
-  @media (max-width: 600px) {
-    .dash {
-      padding: 20px;
-      gap: 16px;
-    }
-    .grid {
-      grid-template-columns: 1fr;
-      grid-template-rows: auto;
-      gap: 24px;
-    }
-    .clock, .weather, .calendar, .todo, .shopping, .sensor-a, .sensor-b, .capture {
-      grid-column: 1 / 2;
-      grid-row: auto;
-    }
   }
 </style>
