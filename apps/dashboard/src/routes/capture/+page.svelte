@@ -5,10 +5,11 @@
   import PenCanvas, { type PenHandle } from '$lib/components/PenCanvas.svelte';
   import { uploadAttachment } from '$lib/api';
 
-  let mode = $state<'type' | 'draw'>('type');
+  let mode = $state<'type' | 'draw' | 'ink'>('type');
   let draft = $state('');
   let textareaEl: HTMLTextAreaElement | undefined = $state();
   let penHandle: PenHandle | null = $state(null);
+  let inkSupported = $state<boolean | null>(null);
   let saving = $state(false);
 
   let suggestions = ['HOME', 'KIDS', 'ERRANDS', 'WORK'];
@@ -34,7 +35,7 @@
     type Attachment = { id: string; url: string; mime: string; size_bytes: number };
     const attachments: Attachment[] = [];
 
-    if (mode === 'draw' && penHandle && !penHandle.isEmpty()) {
+    if ((mode === 'draw' || mode === 'ink') && penHandle && !penHandle.isEmpty()) {
       const blob = await penHandle.getBlob('image/png');
       if (blob) {
         try {
@@ -69,6 +70,7 @@
             proposedCategory: selected,
             attachments,
             input_mode: mode,
+            ink_supported: inkSupported,
           },
         }),
       });
@@ -97,8 +99,26 @@
         class:on={mode === 'draw'}
         onclick={() => (mode = 'draw')}
       >Draw</button>
+      <button
+        type="button"
+        class:on={mode === 'ink'}
+        onclick={() => (mode = 'ink')}
+        disabled={inkSupported === false}
+        title={
+          inkSupported === true
+            ? 'Ink Enhancement API supported'
+            : inkSupported === false
+              ? 'navigator.ink not available'
+              : 'Detecting…'
+        }
+      >
+        Ink
+        <span class="status">
+          {inkSupported === true ? '✓' : inkSupported === false ? '—' : '…'}
+        </span>
+      </button>
     </div>
-    {#if mode === 'draw'}
+    {#if mode === 'draw' || mode === 'ink'}
       <button type="button" class="clear" onclick={() => penHandle?.clear()}>
         <Eraser size={20} strokeWidth={2.5} />
         Clear
@@ -117,8 +137,12 @@
         placeholder="What's on your mind?"
         spellcheck="false"
       ></textarea>
-      <div class="canvas-wrap" class:active={mode === 'draw'}>
-        <PenCanvas onReady={(h) => (penHandle = h)} />
+      <div class="canvas-wrap" class:active={mode === 'draw' || mode === 'ink'}>
+        <PenCanvas
+          onReady={(h) => (penHandle = h)}
+          inkTrails={mode === 'ink'}
+          onInkAvailable={(b) => (inkSupported = b)}
+        />
       </div>
     </div>
   </div>
@@ -232,6 +256,17 @@
   .seg button.on {
     background: var(--ink);
     color: var(--paper);
+  }
+  .seg button:disabled {
+    color: var(--disabled);
+    cursor: not-allowed;
+  }
+  .seg button .status {
+    margin-left: 8px;
+    font-family: var(--font-mono);
+    font-weight: 500;
+    font-size: 11px;
+    letter-spacing: 0;
   }
   .clear {
     display: inline-flex;

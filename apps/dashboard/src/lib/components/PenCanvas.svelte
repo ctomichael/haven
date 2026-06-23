@@ -7,15 +7,37 @@
     getBlob: (type?: string) => Promise<Blob | null>;
   };
 
+  // Ink Enhancement API (https://wicg.github.io/ink-enhancement/) — draft.
+  // Lets the UA render a low-latency trail from the last pointermove until
+  // the next paint, so handwriting feels responsive even when the canvas
+  // is slow to update.
+  type InkStyle = { color: string; diameter: number };
+  type InkPresenter = {
+    updateInkTrailStartPoint: (event: PointerEvent, style: InkStyle) => void;
+  };
+  type NavigatorInk = Navigator & {
+    ink?: {
+      requestPresenter: (init?: { presentationArea?: Element }) => Promise<InkPresenter>;
+    };
+  };
+
   let {
     onReady,
     strokeWidth = 2.5,
-  }: { onReady?: (h: PenHandle) => void; strokeWidth?: number } = $props();
+    inkTrails = false,
+    onInkAvailable,
+  }: {
+    onReady?: (h: PenHandle) => void;
+    strokeWidth?: number;
+    inkTrails?: boolean;
+    onInkAvailable?: (supported: boolean) => void;
+  } = $props();
 
   let canvasEl: HTMLCanvasElement | undefined = $state();
   let ctx: CanvasRenderingContext2D | null = null;
   let drawing = false;
   let dirty = false;
+  let inkPresenter: InkPresenter | null = null;
 
   function setupCanvas() {
     if (!canvasEl) return;
@@ -69,6 +91,20 @@
     const [x, y] = getPos(e);
     ctx.lineTo(x, y);
     ctx.stroke();
+
+    if (inkTrails && inkPresenter) {
+      // Tell the UA to delegate-render the trail from this point until the
+      // next paint commits the canvas update. The spec is draft so we
+      // swallow any runtime exceptions.
+      try {
+        inkPresenter.updateInkTrailStartPoint(e, {
+          color: '#000000',
+          diameter: strokeWidth,
+        });
+      } catch {
+        /* ignore — best-effort */
+      }
+    }
   }
 
   function onUp(e: PointerEvent) {
@@ -117,9 +153,29 @@
     });
   }
 
+  async function setupInkPresenter() {
+    if (typeof navigator === 'undefined' || !canvasEl) {
+      onInkAvailable?.(false);
+      return;
+    }
+    const nav = navigator as NavigatorInk;
+    if (!nav.ink?.requestPresenter) {
+      onInkAvailable?.(false);
+      return;
+    }
+    try {
+      inkPresenter = await nav.ink.requestPresenter({ presentationArea: canvasEl });
+      onInkAvailable?.(true);
+    } catch {
+      inkPresenter = null;
+      onInkAvailable?.(false);
+    }
+  }
+
   onMount(() => {
     setupCanvas();
     onReady?.({ clear, isEmpty, getBlob });
+    void setupInkPresenter();
     const ro = new ResizeObserver(() => setupCanvas());
     if (canvasEl) ro.observe(canvasEl);
     return () => ro.disconnect();
