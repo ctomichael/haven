@@ -136,3 +136,53 @@ export async function uploadAttachment(
   if (!res.ok) throw new Error(`uploadAttachment failed: HTTP ${res.status}`);
   return (await res.json()) as ApiAttachment;
 }
+
+// ----- Inbox -----------------------------------------------------------
+
+export type InboxAttachment = {
+  id: string;
+  url: string;
+  mime: string;
+  size_bytes: number;
+};
+
+export type InboxMetadata = {
+  attachments?: InboxAttachment[];
+  proposedCategory?: string;
+  input_mode?: string;
+  [key: string]: unknown;
+};
+
+export type InboxStatus = 'pending' | 'filed' | 'ignored';
+
+export type InboxFiledRef = {
+  kind: string;
+  ref_id: string;
+};
+
+export type ApiInboxItem = {
+  id: string;
+  ts: string;
+  source: string;
+  raw_text: string;
+  audio_url: string | null;
+  metadata: InboxMetadata;
+  status: InboxStatus;
+  filed_refs: InboxFiledRef[];
+  actor_user_id: string | null;
+  device_id: string | null;
+};
+
+export async function fetchInbox(
+  fetchFn: typeof fetch = fetch,
+  params: { status?: InboxStatus; limit?: number } = {},
+): Promise<ApiInboxItem[]> {
+  const q = new URLSearchParams();
+  if (params.status) q.set('status', params.status);
+  if (params.limit !== undefined) q.set('limit', String(params.limit));
+  const url = '/api/inbox' + (q.size ? `?${q.toString()}` : '');
+  const res = await fetchFn(url);
+  if (!res.ok) throw new Error(`fetchInbox failed: HTTP ${res.status}`);
+  const data = (await res.json()) as { rows: ApiInboxItem[] };
+  return data.rows;
+}
