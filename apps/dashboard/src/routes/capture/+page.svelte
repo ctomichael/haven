@@ -14,17 +14,25 @@
   type VoiceAttachment = { id: string; url: string; mime: string; size_bytes: number };
   let voiceAttachments = $state<VoiceAttachment[]>([]);
 
-  // --- Hold-to-speak recording state ---
+  // --- Voice recording state ---
+  // Gestures:
+  //   • Hold (≥350ms press)  → release stops
+  //   • Tap (release <350ms) → switch to "toggle" mode, recording continues;
+  //                            next tap on the button stops it
   let recording = $state(false);
   let transcribing = $state(false);
   let recordingSeconds = $state(0);
   let voiceError = $state<string | null>(null);
+  let recordingMode = $state<'idle' | 'holding' | 'toggled'>('idle');
+  let holdReached = false;
+  let holdTimer: ReturnType<typeof setTimeout> | null = null;
   let mediaRecorder: MediaRecorder | null = null;
   let micStream: MediaStream | null = null;
   let recordChunks: Blob[] = [];
   let recordMime = 'audio/webm';
   let recordTickHandle: ReturnType<typeof setInterval> | null = null;
   let recordStartTs = 0;
+  const HOLD_THRESHOLD_MS = 350;
 
   let suggestions = ['HOME', 'KIDS', 'ERRANDS', 'WORK'];
   let selected = $state('HOME');
@@ -113,6 +121,57 @@
       mediaRecorder?.stop();
     } catch {
       stopMic();
+    }
+  }
+
+  function clearHoldTimer() {
+    if (holdTimer) {
+      clearTimeout(holdTimer);
+      holdTimer = null;
+    }
+  }
+
+  function onMicDown(e: PointerEvent) {
+    e.preventDefault();
+    // Second tap in toggle mode stops.
+    if (recordingMode === 'toggled') {
+      stopRecording();
+      recordingMode = 'idle';
+      return;
+    }
+    if (recordingMode !== 'idle' || transcribing) return;
+    try {
+      (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    } catch {
+      /* not all pointer types support capture */
+    }
+    void startRecording();
+    recordingMode = 'holding';
+    holdReached = false;
+    holdTimer = setTimeout(() => {
+      holdReached = true;
+      holdTimer = null;
+    }, HOLD_THRESHOLD_MS);
+  }
+
+  function onMicUp() {
+    if (recordingMode !== 'holding') return;
+    if (holdReached) {
+      // Past the threshold → hold gesture → release stops.
+      stopRecording();
+      recordingMode = 'idle';
+    } else {
+      // Released within threshold → tap → stay recording in toggle mode.
+      clearHoldTimer();
+      recordingMode = 'toggled';
+    }
+  }
+
+  function onMicCancel() {
+    if (recordingMode === 'holding') {
+      clearHoldTimer();
+      stopRecording();
+      recordingMode = 'idle';
     }
   }
 
@@ -270,19 +329,20 @@
         type="button"
         class="mic"
         class:rec={recording}
-        aria-label="Hold to speak"
-        onpointerdown={(e) => { e.preventDefault(); void startRecording(); }}
-        onpointerup={stopRecording}
-        onpointercancel={stopRecording}
-        onpointerleave={stopRecording}
+        aria-label="Hold or tap to speak"
+        onpointerdown={onMicDown}
+        onpointerup={onMicUp}
+        onpointercancel={onMicCancel}
       >
         <Mic size={32} strokeWidth={2.5} />
         {#if transcribing}
           Transcribing…
+        {:else if recordingMode === 'toggled'}
+          Tap to stop · {recordingSeconds}s
         {:else if recording}
           Recording · {recordingSeconds}s
         {:else}
-          Hold to speak
+          Hold or tap to speak
         {/if}
       </button>
       <button type="button" class="photo" aria-label="Add photo">
