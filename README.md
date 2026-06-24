@@ -9,6 +9,11 @@ A custom household dashboard and family second-brain.
 
 See [`design/`](design/) for the design system brief and the MCP contract.
 
+> **Where are you running this?**
+>
+> - **Beelink (production VM)** → use `sudo ./infra/install.sh` then `sudo make deploy` for updates. **Do not run `bun run dev`** — that's the hot-reload watcher and won't survive a logout. Full guide: [`docs/deployment.md`](docs/deployment.md).
+> - **Laptop (development)** → the "Quick start" below is what you want.
+
 ## Layout
 
 ```
@@ -70,6 +75,20 @@ That spawns the server, lists tools, calls each, and confirms audit_log
 rows land in Postgres. See [`design/mcp-contract.md`](design/mcp-contract.md)
 for the full tool catalogue and the plan envelope contract.
 
-## Status
+## Production (Beelink Ubuntu VM)
 
-This is the v0 scaffold — no DB, no auth, no widgets yet. The wiring proves frontend ↔ backend round-trip works (REST + SSE).
+See [`docs/deployment.md`](docs/deployment.md) for the full topology.
+TL;DR for first install on a fresh box:
+
+```bash
+sudo git clone git@github.com:ctomichael/haven.git /opt/haven
+cd /opt/haven
+sudo ./infra/install.sh        # ~3–5 min on first run
+sudoedit /etc/haven/.env       # set CADDY_DOMAIN, CF_API_TOKEN, etc.
+sudo systemctl restart haven-backend haven-dashboard caddy
+```
+
+Production runs **all three services under systemd** (`haven-backend`,
+`haven-dashboard`, `haven-autopull.timer`), with Postgres in a Docker
+container and Caddy as the TLS edge. Updates pull every 4h via
+`haven-autopull.timer`, or `sudo make deploy` for immediate.

@@ -4,6 +4,13 @@ You are operating in the Haven monorepo. Most invocations of you in this repo co
 
 When you are dispatched with a plan, your job is to land the files described in the plan, register what needs registering, commit with a meaningful message, and trigger `dashboard_reload`. Do not deviate from the plan; if the plan is wrong, fail with `error.code = invalid_args` so Hermes can re-plan.
 
+## Where are you running?
+
+- **Beelink (production VM, repo at `/opt/haven`)** — services run under systemd as the `haven` user. **Do NOT run `bun run dev`** — it's the laptop hot-reload watcher and won't survive a logout. First-time install: `sudo ./infra/install.sh`. Push from laptop and the 4h autopull timer redeploys; for immediate, `sudo make deploy`. See "Deployment notes" below for the full layout and commands.
+- **Laptop (development)** — `bun install && bun run dev` works, dashboard at `:5173`, backend at `:8080`. Vite proxies `/api/*` and `/attachments/*` to the backend.
+
+If you're unsure which environment you're in, check `hostname`, look for `/etc/haven/.env`, and `systemctl status haven-backend` — if that unit exists, you're on the Beelink.
+
 ## Conventions
 
 ### Layout
