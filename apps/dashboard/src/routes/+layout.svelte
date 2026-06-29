@@ -3,11 +3,22 @@
   import type { Surface } from '$lib/surface';
   import { onDestroy, onMount } from 'svelte';
   import { invalidateAll } from '$app/navigation';
+  import { busy } from '$lib/busy.svelte';
 
   let { children } = $props();
 
   let es: EventSource | undefined;
   let storedStartedAt: string | null = null;
+
+  // A deploy landed while the UI was mid-operation (e.g. recording a voice
+  // note). Hold the hard reload until the user is idle so we don't lose it.
+  let pendingReload = $state(false);
+
+  $effect(() => {
+    if (pendingReload && !busy.active) {
+      window.location.reload();
+    }
+  });
 
   // Pick surface from ?surface= query, then by viewport width.
   // The CSS rules read body[data-surface=...] — components don't read
@@ -38,9 +49,16 @@
         if (storedStartedAt !== null && storedStartedAt !== data.started_at) {
           // eslint-disable-next-line no-console
           console.log(
-            `[haven] backend started_at changed (${storedStartedAt} → ${data.started_at}); reloading`,
+            `[haven] backend started_at changed (${storedStartedAt} → ${data.started_at}); ` +
+              (busy.active ? 'deferring reload (UI busy)' : 'reloading'),
           );
-          window.location.reload();
+          // Defer the hard reload while mid-operation; the $effect above
+          // flushes it the moment busy clears.
+          if (busy.active) {
+            pendingReload = true;
+          } else {
+            window.location.reload();
+          }
           return;
         }
         storedStartedAt = data.started_at;

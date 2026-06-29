@@ -1,9 +1,11 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
+  import { onDestroy } from 'svelte';
   import { Mic, Image as ImageIcon, X as XIcon, Eraser } from 'lucide-svelte';
   import AccentChip from '$lib/components/AccentChip.svelte';
   import PenCanvas, { type PenHandle } from '$lib/components/PenCanvas.svelte';
   import { uploadAttachment } from '$lib/api';
+  import { busy } from '$lib/busy.svelte';
 
   let mode = $state<'type' | 'draw'>('draw');
   let draft = $state('');
@@ -48,6 +50,13 @@
       queueMicrotask(() => textareaEl?.focus());
     }
   });
+
+  // Tell the layout we're mid-operation so a deploy reload defers until the
+  // recording / upload / save finishes rather than nuking it.
+  $effect(() => {
+    busy.set('capture', recording || transcribing || saving);
+  });
+  onDestroy(() => busy.set('capture', false));
 
   // ----- Hold to speak -------------------------------------------------
 
