@@ -168,7 +168,7 @@ export const dummy = {
     { id: 's13', name: 'Dark chocolate',   aisle: 'pantry', bought: true },
   ] satisfies ShoppingItem[],
   sensors: [
-    { label: 'Living room', value: 21, unit: '°C', state: 'healthy' as const },
+    { label: 'Living room', value: 20, unit: '°C', state: 'healthy' as const },
     { label: 'Bedroom',     value: 18, unit: '°C', state: 'warn' as const, warnText: 'Dry' },
     { label: 'Kitchen',     value: 22, unit: '°C', state: 'healthy' as const },
   ] satisfies Sensor[],
