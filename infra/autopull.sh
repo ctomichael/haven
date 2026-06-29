@@ -1,9 +1,14 @@
 #!/bin/sh
 # Haven — autopull. Fetches origin, fast-forwards if HEAD changed, and
-# re-deploys. Invoked by haven-autopull.service (timer every 4h).
+# re-deploys. Invoked by haven-autopull.service (triggered by either the
+# 4h timer or the deploy-trigger path unit).
 #
-# Runs as root: git/build steps drop to the haven user; systemctl
-# restart needs root. Manual invocation:  sudo /opt/haven/infra/autopull.sh
+# Two passes:
+#   1. (no env var) fetch, compare, pull, re-exec the freshly-pulled
+#      script so any script-level fix (build command, restart logic) is
+#      in effect for the deploy itself.
+#   2. (HAVEN_AUTOPULL_REEXECED=1) run bun install / migrate / build /
+#      restart — no git operations here, since they already happened.
 
 set -eu
 
@@ -15,28 +20,31 @@ log() { printf '\033[1;34m[haven-autopull]\033[0m %s\n' "$*"; }
 
 cd "$REPO_DIR"
 
-OLD=$(sudo -u "$HAVEN_USER" -H git rev-parse HEAD)
-sudo -u "$HAVEN_USER" -H git fetch --quiet origin "$BRANCH"
-NEW=$(sudo -u "$HAVEN_USER" -H git rev-parse "origin/$BRANCH")
+# ----- Pass 1: pull + re-exec -------------------------------------------
 
-if [ "$OLD" = "$NEW" ]; then
-  log "No changes (HEAD still $OLD)"
-  exit 0
-fi
-
-log "Pulling $OLD → $NEW"
-sudo -u "$HAVEN_USER" -H git pull --ff-only --quiet origin "$BRANCH"
-
-# After the pull this script might have changed on disk (e.g. a bug fix
-# to the build command below). The shell is still executing the OLD
-# in-memory copy, so exec ourselves to pick up the new content before
-# touching anything else. The HAVEN_AUTOPULL_REEXECED guard prevents
-# an infinite loop if exec fails or the new script also calls exec.
 if [ -z "${HAVEN_AUTOPULL_REEXECED:-}" ]; then
+  OLD=$(sudo -u "$HAVEN_USER" -H git rev-parse HEAD)
+  sudo -u "$HAVEN_USER" -H git fetch --quiet origin "$BRANCH"
+  NEW=$(sudo -u "$HAVEN_USER" -H git rev-parse "origin/$BRANCH")
+
+  if [ "$OLD" = "$NEW" ]; then
+    log "No changes (HEAD still $OLD)"
+    exit 0
+  fi
+
+  log "Pulling $OLD → $NEW"
+  sudo -u "$HAVEN_USER" -H git pull --ff-only --quiet origin "$BRANCH"
+
   log "Re-execing with the freshly-pulled script"
-  HAVEN_AUTOPULL_REEXECED=1 export HAVEN_AUTOPULL_REEXECED
+  HAVEN_AUTOPULL_REEXECED=1
+  export HAVEN_AUTOPULL_REEXECED
   exec "$0" "$@"
 fi
+
+# ----- Pass 2: build + restart ------------------------------------------
+
+NEW=$(sudo -u "$HAVEN_USER" -H git rev-parse HEAD)
+log "Deploying $NEW"
 
 log "bun install --frozen-lockfile"
 sudo -u "$HAVEN_USER" -H sh -c "cd '$REPO_DIR' && /usr/local/bin/bun install --frozen-lockfile"
