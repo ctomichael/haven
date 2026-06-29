@@ -1,0 +1,50 @@
+#!/bin/sh
+# Haven — pre-push hook used as "post-push" (git has no native post-push).
+#
+# Fires POST /api/deploy in the background after the push starts. By the
+# time the curl runs (small sleep), the push has either completed or
+# failed — either way the deploy webhook is a no-op when there are no
+# new commits on origin, so a false trigger is harmless.
+#
+# Reads:
+#   HAVEN_DEPLOY_TOKEN (required) from .env at the repo root
+#   HAVEN_DEPLOY_URL   (optional) ditto; default is the LAN IP
+#
+# Silent no-op if .env is missing or HAVEN_DEPLOY_TOKEN is unset.
+# Install with:  make install-hooks  (sets core.hooksPath=.githooks)
+
+set -eu
+
+# Drain the protocol stdin git feeds us. We don't act on it.
+cat > /dev/null
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+ENV_FILE="$REPO_ROOT/.env"
+
+[ -f "$ENV_FILE" ] || exit 0
+
+TOKEN=$(grep '^HAVEN_DEPLOY_TOKEN=' "$ENV_FILE" 2>/dev/null | cut -d= -f2- || true)
+URL=$(grep '^HAVEN_DEPLOY_URL=' "$ENV_FILE" 2>/dev/null | cut -d= -f2- || true)
+URL="${URL:-http://192.168.1.143:8080/api/deploy}"
+
+[ -n "$TOKEN" ] || exit 0
+
+# Defer the curl so the push has time to complete first. Output to a
+# rotating log so you can eyeball misfires after the fact.
+LOG="${TMPDIR:-/tmp}/haven-deploy-hook.log"
+(
+  sleep 3
+  TS="$(date '+%Y-%m-%d %H:%M:%S')"
+  if curl -fsS -m 15 -X POST "$URL" \
+      -H "Authorization: Bearer $TOKEN" \
+      -o "$LOG.body" 2> "$LOG.err"; then
+    printf '%s  ok       %s\n' "$TS" "$URL" >> "$LOG"
+  else
+    printf '%s  FAILED   %s\n%s\n' "$TS" "$URL" "$(cat "$LOG.err" 2>/dev/null)" >> "$LOG"
+  fi
+) >/dev/null 2>&1 &
+
+# Detach so the curl survives the parent shell exiting after push.
+disown 2>/dev/null || true
+
+exit 0

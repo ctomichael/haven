@@ -59,6 +59,23 @@ The dashboard Vite dev server proxies `/api/*` to the backend, so both run on fi
 | `bun run check` | Type-check all apps |
 | `bun run mcp` | Start the HouseholdMCP server on stdio (usually launched by clients) |
 | `bun run clean` | Wipe build artifacts and node_modules |
+| `make install-hooks` | Wire up `.githooks/pre-push` — auto-fires `/api/deploy` after every push |
+
+## Auto-deploy after `git push`
+
+Once per clone:
+
+```bash
+make install-hooks
+```
+
+Sets `core.hooksPath=.githooks` so the tracked `.githooks/pre-push` runs
+on every push. It reads `HAVEN_DEPLOY_TOKEN` from `.env` (required) and
+backgrounds a `curl` to `/api/deploy`. Set `HAVEN_DEPLOY_URL=...` in
+`.env` if you want to hit a different host than the default LAN IP.
+
+Hook misfires log to `$TMPDIR/haven-deploy-hook.log` for after-the-fact
+diagnosis.
 
 ## MCP server (apps/mcp)
 

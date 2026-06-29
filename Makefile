@@ -1,9 +1,10 @@
-.PHONY: help db-up db-down db-logs db-psql db-reset dev install deploy autopull backup-db restore-db
+.PHONY: help db-up db-down db-logs db-psql db-reset dev install install-hooks deploy autopull backup-db restore-db
 
 help:
 	@echo "Haven — development tasks"
 	@echo ""
 	@echo "  make install       Install workspace dependencies"
+	@echo "  make install-hooks Wire up .githooks/ (pre-push fires /api/deploy)"
 	@echo "  make dev           Run backend + dashboard concurrently"
 	@echo ""
 	@echo "  make db-up         Start the Postgres container in the background"
@@ -20,6 +21,13 @@ help:
 
 install:
 	bun install
+
+install-hooks:
+	git config core.hooksPath .githooks
+	@echo "✓ core.hooksPath → .githooks (pre-push will trigger /api/deploy)"
+	@echo "  Token comes from .env (HAVEN_DEPLOY_TOKEN). Override URL with"
+	@echo "  HAVEN_DEPLOY_URL=... in .env if you need a different host."
+	@echo "  Watch misfires:  tail -f $${TMPDIR:-/tmp}/haven-deploy-hook.log"
 
 dev:
 	bun run dev
