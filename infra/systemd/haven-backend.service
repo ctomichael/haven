@@ -11,6 +11,8 @@ User=haven
 Group=haven
 WorkingDirectory=/opt/haven/apps/backend
 EnvironmentFile=/etc/haven/.env
+# PORT must be set per-service since both services share /etc/haven/.env.
+Environment=PORT=8080
 ExecStart=/usr/local/bin/bun run src/index.ts
 Restart=on-failure
 RestartSec=5s

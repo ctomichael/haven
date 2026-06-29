@@ -32,15 +32,14 @@ Three long-running services + a 4h timer + a Postgres container.
 
 ## Prerequisites
 
-- Ubuntu 22.04 LTS or newer on the Beelink VM
+- Ubuntu 22.04 LTS or newer (a Proxmox LXC is fine)
 - SSH access as a sudoer
-- A domain you can put a wildcard or `haven.*` A record on, with DNS at
-  Cloudflare (so we can get TLS via DNS-01 challenge with no inbound
-  ports open)
-- A Cloudflare API token with `Zone:Read` + `DNS:Edit` scoped to the zone
+- A domain reachable from the LAN, ideally with DNS at Cloudflare for
+  DNS-01 cert challenges. If you already terminate TLS elsewhere (Docker
+  Caddy, Cloudflare Tunnel, Traefik, NGINX), see "Running behind an
+  existing reverse proxy" below and set `HAVEN_INSTALL_CADDY=no`.
 - A GitHub SSH deploy key for the repo (read-only is enough for pulls;
-  read-write only if Hermes-dispatched commits need to push from the
-  Beelink)
+  read-write only if Hermes-dispatched commits need to push from prod)
 
 ## First install
 
@@ -88,6 +87,48 @@ Three long-running services + a 4h timer + a Postgres container.
    ```
 
    Then hit `https://$CADDY_DOMAIN` from another device on the LAN.
+
+## Running behind an existing reverse proxy
+
+If you already have a reverse proxy (Docker Caddy, Traefik, NGINX,
+Cloudflare Tunnel, …), skip the bundled Caddy with:
+
+```bash
+sudo HAVEN_INSTALL_CADDY=no ./infra/install.sh
+```
+
+Then point your proxy at:
+
+```
+/api/*          → 127.0.0.1:8080   (haven-backend)
+/attachments/*  → /var/haven/attachments  (file_server / serve from disk)
+/*              → 127.0.0.1:3000   (haven-dashboard, SvelteKit SSR)
+```
+
+The dashboard's systemd unit binds to `0.0.0.0:3000` by default so a
+proxy on a different bridge (Docker, LXC veth) can reach it. Lock it
+down to `127.0.0.1` by overriding `Environment=HOST=127.0.0.1` in
+`/etc/systemd/system/haven-dashboard.service` if your proxy is on the
+host network.
+
+Set `ORIGIN` in `/etc/haven/.env` to the public URL — SvelteKit's
+adapter-node uses it for CSRF on POST/form requests.
+
+Example Docker-Caddy block:
+
+```caddy
+haven.yourdomain.com {
+    handle /api/* { reverse_proxy 172.18.0.1:8080 }
+    handle /attachments/* {
+        root * /var/haven
+        file_server
+    }
+    handle { reverse_proxy 172.18.0.1:3000 }
+}
+```
+
+(Where `172.18.0.1` is the Docker bridge gateway from the Caddy
+container's POV. Verify with `ip -4 addr show docker0` on the host.)
 
 ## Caddy + Cloudflare DNS
 

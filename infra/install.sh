@@ -56,7 +56,10 @@ apt-get install -qq -y \
 
 if [ ! -x "$BUN_HOME/bin/bun" ]; then
   log "Installing Bun system-wide at $BUN_HOME"
-  curl -fsSL https://bun.sh/install | BUN_INSTALL="$BUN_HOME" sh
+  # The Bun installer uses bash-isms (arrays, [[ ]]); piping to `sh` fails
+  # on Ubuntu where /bin/sh is dash. Force bash explicitly.
+  command -v bash >/dev/null 2>&1 || apt-get install -qq -y bash
+  curl -fsSL https://bun.sh/install | BUN_INSTALL="$BUN_HOME" bash
 fi
 ln -sf "$BUN_HOME/bin/bun" /usr/local/bin/bun
 ln -sf "$BUN_HOME/bin/bunx" /usr/local/bin/bunx
@@ -83,7 +86,7 @@ fi
 
 # ---- 5b. ffmpeg + whisper.cpp (voice transcription) ---------------------
 
-apt-get install -qq -y ffmpeg
+apt-get install -qq -y ffmpeg cmake
 
 WHISPER_SRC="${WHISPER_SRC:-/opt/whisper.cpp}"
 WHISPER_MODEL_DIR="${WHISPER_MODEL_DIR:-/opt/whisper-models}"
@@ -94,8 +97,16 @@ if ! command -v whisper-cli >/dev/null 2>&1; then
   if [ ! -d "$WHISPER_SRC" ]; then
     git clone --depth 1 https://github.com/ggerganov/whisper.cpp "$WHISPER_SRC"
   fi
-  (cd "$WHISPER_SRC" && make -j"$(nproc 2>/dev/null || echo 2)" whisper-cli >/dev/null)
-  # Recent whisper.cpp builds put binaries under build/bin/; older ones at root.
+  # whisper.cpp switched to CMake in v1.7+ — the `make whisper-cli` target
+  # was removed. Detect and use whichever build system the checkout has.
+  if [ -f "$WHISPER_SRC/CMakeLists.txt" ]; then
+    (cd "$WHISPER_SRC" \
+      && cmake -B build >/dev/null \
+      && cmake --build build -j"$(nproc 2>/dev/null || echo 2)" --target whisper-cli >/dev/null)
+  else
+    (cd "$WHISPER_SRC" && make -j"$(nproc 2>/dev/null || echo 2)" whisper-cli >/dev/null)
+  fi
+  # New layout puts the binary under build/bin/; older layouts at the root.
   if [ -x "$WHISPER_SRC/build/bin/whisper-cli" ]; then
     ln -sf "$WHISPER_SRC/build/bin/whisper-cli" /usr/local/bin/whisper-cli
   elif [ -x "$WHISPER_SRC/whisper-cli" ]; then
@@ -113,8 +124,15 @@ if [ ! -f "$WHISPER_MODEL_FILE" ]; then
 fi
 
 # ---- 6. Caddy (base) ------------------------------------------------------
+# Skip with HAVEN_INSTALL_CADDY=no when you already have a reverse proxy
+# (e.g. a Docker Caddy container on the host). See docs/deployment.md
+# "Running behind an existing reverse proxy".
 
-if ! command -v caddy >/dev/null 2>&1; then
+INSTALL_CADDY="${HAVEN_INSTALL_CADDY:-yes}"
+
+if [ "$INSTALL_CADDY" != "yes" ]; then
+  log "Skipping Caddy install (HAVEN_INSTALL_CADDY=$INSTALL_CADDY)"
+elif ! command -v caddy >/dev/null 2>&1; then
   log "Installing Caddy (base) from official apt repo"
   curl -fsSL https://dl.cloudsmith.io/public/caddy/stable/gpg.key \
     | gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
@@ -187,15 +205,22 @@ systemctl start haven-autopull.timer
 
 # ---- 13. Caddyfile --------------------------------------------------------
 
-mkdir -p /etc/caddy
-if [ ! -f /etc/caddy/Caddyfile ] || ! grep -q '# managed by haven-install' /etc/caddy/Caddyfile 2>/dev/null; then
-  log "Installing /etc/caddy/Caddyfile from template"
-  {
-    echo '# managed by haven-install — edit then `systemctl reload caddy`'
-    cat "$REPO_DIR/infra/Caddyfile.example"
-  } > /etc/caddy/Caddyfile
+if [ "$INSTALL_CADDY" = "yes" ]; then
+  mkdir -p /etc/caddy
+  if [ ! -f /etc/caddy/Caddyfile ] || ! grep -q '# managed by haven-install' /etc/caddy/Caddyfile 2>/dev/null; then
+    log "Installing /etc/caddy/Caddyfile from template"
+    {
+      echo '# managed by haven-install — edit then `systemctl reload caddy`'
+      cat "$REPO_DIR/infra/Caddyfile.example"
+    } > /etc/caddy/Caddyfile
+  fi
+  systemctl reload caddy 2>/dev/null || systemctl restart caddy
+else
+  log "Caddyfile install skipped — wire your existing reverse proxy to:"
+  log "    /api/*           → 127.0.0.1:8080 (haven-backend)"
+  log "    /attachments/*   → /var/haven/attachments (file_server)"
+  log "    /*               → 127.0.0.1:3000 (haven-dashboard)"
 fi
-systemctl reload caddy 2>/dev/null || systemctl restart caddy
 
 # ---- 14. Banner -----------------------------------------------------------
 
@@ -208,7 +233,7 @@ Env:         $ENV_FILE
 Data:        $HAVEN_DATA_DIR
 User:        $HAVEN_USER
 Services:    haven-backend, haven-dashboard, haven-autopull.timer
-Caddy:       /etc/caddy/Caddyfile
+Caddy:       $([ "$INSTALL_CADDY" = "yes" ] && echo "/etc/caddy/Caddyfile" || echo "skipped (HAVEN_INSTALL_CADDY=$INSTALL_CADDY)")
 Whisper:     $(command -v whisper-cli || echo MISSING) (model: $WHISPER_MODEL_FILE)
 ffmpeg:      $(command -v ffmpeg || echo MISSING)
 

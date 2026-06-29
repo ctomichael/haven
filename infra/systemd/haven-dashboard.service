@@ -11,8 +11,13 @@ User=haven
 Group=haven
 WorkingDirectory=/opt/haven/apps/dashboard
 EnvironmentFile=/etc/haven/.env
-Environment=HOST=127.0.0.1
+# 0.0.0.0 so a reverse proxy on a different bridge (e.g. Docker Caddy)
+# can reach the SSR. Override to 127.0.0.1 if running everything on the
+# host network and you want to limit exposure.
+Environment=HOST=0.0.0.0
 Environment=PORT=3000
+# ORIGIN is sourced from /etc/haven/.env (set it to the public URL —
+# SvelteKit needs it for CSRF on POST/form actions).
 ExecStart=/usr/local/bin/bun run build/index.js
 Restart=on-failure
 RestartSec=5s
