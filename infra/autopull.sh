@@ -34,7 +34,7 @@ log "Applying safe migrations"
 sudo -u "$HAVEN_USER" -H sh -c "cd '$REPO_DIR/apps/backend' && /usr/local/bin/bun run db:migrate"
 
 log "Building dashboard"
-sudo -u "$HAVEN_USER" -H sh -c "cd '$REPO_DIR' && /usr/local/bin/bun --filter @haven/dashboard run build"
+sudo -u "$HAVEN_USER" -H sh -c "cd '$REPO_DIR' && /usr/local/bin/bun run --filter @haven/dashboard build"
 
 log "Restarting services"
 systemctl restart haven-backend haven-dashboard

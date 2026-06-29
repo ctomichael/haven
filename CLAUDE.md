@@ -84,8 +84,8 @@ Backend at <http://localhost:8080>, dashboard at <http://localhost:5173>. The da
 For one app at a time:
 
 ```bash
-bun --filter @haven/backend dev
-bun --filter @haven/dashboard dev
+bun run --filter @haven/backend dev
+bun run --filter @haven/dashboard dev
 ```
 
 ## Deployment notes (when running on the Beelink)

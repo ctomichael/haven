@@ -26,7 +26,7 @@ design/
   mcp-contract.md          HouseholdMCP tool surface + settled conventions
 ```
 
-Workspaces are managed by Bun. Bun runs both apps in parallel via `bun --filter`.
+Workspaces are managed by Bun. Bun runs both apps in parallel via `bun run --filter`.
 
 ## Requirements
 
@@ -68,7 +68,7 @@ the v0.1 read-only tool surface end-to-end:
 
 ```bash
 make db-up
-bun --filter @haven/mcp run smoke
+bun run --filter @haven/mcp smoke
 ```
 
 That spawns the server, lists tools, calls each, and confirms audit_log

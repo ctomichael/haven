@@ -9,10 +9,10 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "bun --filter='@haven/backend' --filter='@haven/dashboard' dev",
-    "build": "bun --filter='./apps/*' build",
-    "check": "bun --filter='./apps/*' check",
-    "mcp": "bun --filter='@haven/mcp' start",
+    "dev": "bun run --filter='@haven/backend' --filter='@haven/dashboard' dev",
+    "build": "bun run --filter='./apps/*' build",
+    "check": "bun run --filter='./apps/*' check",
+    "mcp": "bun run --filter='@haven/mcp' start",
     "clean": "rm -rf apps/*/.svelte-kit apps/*/dist apps/*/build node_modules apps/*/node_modules"
   },
   "devDependencies": {

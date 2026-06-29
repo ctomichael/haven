@@ -55,7 +55,7 @@ deploy:
 	@if [ "$$(id -u)" -ne 0 ]; then echo "Run with sudo" >&2; exit 1; fi
 	sudo -u $(HAVEN_USER) -H sh -c "cd $(REPO_DIR) && /usr/local/bin/bun install --frozen-lockfile"
 	sudo -u $(HAVEN_USER) -H sh -c "cd $(REPO_DIR)/apps/backend && /usr/local/bin/bun run db:migrate"
-	sudo -u $(HAVEN_USER) -H sh -c "cd $(REPO_DIR) && /usr/local/bin/bun --filter @haven/dashboard run build"
+	sudo -u $(HAVEN_USER) -H sh -c "cd $(REPO_DIR) && /usr/local/bin/bun run --filter @haven/dashboard build"
 	systemctl restart haven-backend haven-dashboard
 
 autopull:

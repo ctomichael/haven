@@ -194,7 +194,7 @@ sudo -u "$HAVEN_USER" -H sh -c "cd '$REPO_DIR/apps/backend' && /usr/local/bin/bu
 # ---- 11. Build dashboard --------------------------------------------------
 
 log "Building dashboard"
-sudo -u "$HAVEN_USER" -H sh -c "cd '$REPO_DIR' && /usr/local/bin/bun --filter @haven/dashboard run build"
+sudo -u "$HAVEN_USER" -H sh -c "cd '$REPO_DIR' && /usr/local/bin/bun run --filter @haven/dashboard build"
 
 # ---- 12. systemd units ----------------------------------------------------
 

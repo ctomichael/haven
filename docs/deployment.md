@@ -320,7 +320,7 @@ curl -sS -X POST http://127.0.0.1:8080/api/voice/transcribe \
 | Check service status                | `systemctl status haven-backend haven-dashboard`     |
 | Tail all logs                       | `journalctl -u haven-* -u caddy -f`                  |
 | Inspect Postgres                    | `make db-psql`                                       |
-| Run the MCP smoke test              | `sudo -u haven bun --filter @haven/mcp run smoke`    |
+| Run the MCP smoke test              | `sudo -u haven bun run --filter @haven/mcp smoke`    |
 | Quick voice transcribe test         | `curl -F file=@clip.webm 127.0.0.1:8080/api/voice/transcribe` |
 | Back up the DB                      | `sudo make backup-db`                                |
 | Restore from a dump                 | `sudo make restore-db BACKUP=path.sql.gz`            |
