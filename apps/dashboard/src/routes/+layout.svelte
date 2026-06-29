@@ -1,9 +1,12 @@
 <script lang="ts">
   import '../app.css';
   import type { Surface } from '$lib/surface';
-  import { onMount } from 'svelte';
+  import { onDestroy, onMount } from 'svelte';
 
   let { children } = $props();
+
+  let es: EventSource | undefined;
+  let storedStartedAt: string | null = null;
 
   // Pick surface from ?surface= query, then by viewport width.
   // The CSS rules read body[data-surface=...] — components don't read
@@ -20,6 +23,34 @@
       surface = 'eink';
     }
     document.body.dataset.surface = surface;
+
+    // Auto-reload when the backend restarts with a new started_at —
+    // i.e. after a deploy lands. EventSource auto-reconnects on
+    // disconnect, and the backend sends a `hello` payload on every
+    // connect. First hello: remember. Subsequent different hello:
+    // hard reload to pick up the new JS bundle.
+    es = new EventSource('/api/events');
+    es.addEventListener('hello', (event: MessageEvent) => {
+      try {
+        const data = JSON.parse(event.data) as { started_at?: string };
+        if (!data.started_at) return;
+        if (storedStartedAt !== null && storedStartedAt !== data.started_at) {
+          // eslint-disable-next-line no-console
+          console.log(
+            `[haven] backend started_at changed (${storedStartedAt} → ${data.started_at}); reloading`,
+          );
+          window.location.reload();
+          return;
+        }
+        storedStartedAt = data.started_at;
+      } catch {
+        /* malformed payload — ignore */
+      }
+    });
+  });
+
+  onDestroy(() => {
+    es?.close();
   });
 </script>
 
