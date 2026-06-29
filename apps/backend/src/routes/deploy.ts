@@ -13,9 +13,12 @@ import { audit } from '../audit.ts';
 // Caddy / Cloudflare Tunnel, so the token must be strong (≥32 random
 // hex bytes — `openssl rand -hex 32`).
 
+// Default to the production location. In dev, set HAVEN_DEPLOY_TRIGGER_PATH
+// to something writable (e.g. /tmp/haven-deploy-pending) if you actually
+// want to exercise this endpoint locally — the systemd .path unit only
+// exists on the server, so dev hits just write a file with no side effect.
 const SENTINEL_PATH =
-  process.env.HAVEN_DEPLOY_TRIGGER_PATH ??
-  path.resolve(process.cwd(), '../../.deploy-pending'); // dev fallback
+  process.env.HAVEN_DEPLOY_TRIGGER_PATH ?? '/var/haven/.deploy-pending';
 
 const deploy = new Hono();
 
