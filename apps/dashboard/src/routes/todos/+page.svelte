@@ -4,8 +4,6 @@
   import Checkbox from '$lib/components/Checkbox.svelte';
   import AccentChip from '$lib/components/AccentChip.svelte';
   import FilterChips from '$lib/components/FilterChips.svelte';
-  import DashboardGrid from '$lib/components/DashboardGrid.svelte';
-  import Cell from '$lib/components/Cell.svelte';
   import { Plus } from 'lucide-svelte';
   import { createTodo, patchTodo, todoAccent, type ApiTodo } from '$lib/api';
 
@@ -99,18 +97,16 @@
     <p class="empty">Nothing in this view.</p>
   {/if}
 
-  <DashboardGrid columns={2} rows="auto" autoRows="auto" rowGap={12} columnGap={20}>
+  <div class="list">
     {#each visible as t (t.id)}
       {@const accent = todoAccent(t)}
-      <Cell w={1}>
-        <div class="row" class:done={t.done}>
-          <Checkbox checked={t.done} onchange={() => toggle(t.id, !t.done)} />
-          <span class="title">{t.title}</span>
-          <AccentChip {accent} label={categoryLabel[accent]} />
-        </div>
-      </Cell>
+      <div class="row" class:done={t.done}>
+        <Checkbox checked={t.done} onchange={() => toggle(t.id, !t.done)} />
+        <span class="title">{t.title}</span>
+        <AccentChip {accent} label={categoryLabel[accent]} />
+      </div>
     {/each}
-  </DashboardGrid>
+  </div>
 
   <form class="add" onsubmit={(e) => { e.preventDefault(); addTodo(); }}>
     <input
@@ -139,6 +135,18 @@
     color: var(--muted-mono);
     text-transform: uppercase;
     padding: 8px 0;
+  }
+  .list {
+    flex: 1;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    /* Rows size to their content and pack at the top — without this the
+       grid's default align-content stretches each row to share the
+       flex-filled height. */
+    align-content: start;
+    column-gap: 20px;
+    row-gap: 12px;
   }
   .row {
     display: grid;
