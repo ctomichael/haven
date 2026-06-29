@@ -1,5 +1,31 @@
 import type { Accent } from './tokens';
 
+// ----- Weather ---------------------------------------------------------
+
+export type ApiForecastDay = {
+  day: string; // "TUE"
+  high: number;
+  low: number;
+  label: string;
+};
+
+export type ApiWeather = {
+  city: string;
+  currentTemp: number;
+  currentLabel: string;
+  observedAt: string | null;
+  source: string;
+  forecast: ApiForecastDay[];
+};
+
+export async function fetchWeather(
+  fetchFn: typeof fetch = fetch,
+): Promise<ApiWeather | null> {
+  const res = await fetchFn('/api/weather');
+  if (!res.ok) throw new Error(`fetchWeather failed: HTTP ${res.status}`);
+  return (await res.json()) as ApiWeather;
+}
+
 // ----- Todos -----------------------------------------------------------
 
 export type ApiTodo = {

@@ -16,9 +16,15 @@
   import StatusBar from '$lib/components/StatusBar.svelte';
 
   import { dummy } from '$lib/dummy';
-  import { patchTodo, type ApiTodo, type ApiShoppingItem } from '$lib/api';
+  import { patchTodo, type ApiTodo, type ApiShoppingItem, type ApiWeather } from '$lib/api';
 
-  let { data }: { data: { todos: ApiTodo[]; shopping: ApiShoppingItem[] } } = $props();
+  let { data }: {
+    data: { todos: ApiTodo[]; shopping: ApiShoppingItem[]; weather: ApiWeather | null };
+  } = $props();
+
+  // Live weather when the backend reached MetService; dummy as the offline
+  // fallback.
+  let weather = $derived(data.weather ?? dummy.weather);
 
   // Local live state — initialised from the load() data, mutated optimistically
   // on toggle. SvelteKit re-runs load() on navigation, so we re-sync there too.
@@ -98,10 +104,10 @@
     <Cell w={5}><ClockWidget /></Cell>
     <Cell w={7}>
       <WeatherWidget
-        city={dummy.weather.city}
-        currentTemp={dummy.weather.currentTemp}
-        currentLabel={dummy.weather.currentLabel}
-        forecast={dummy.weather.forecast}
+        city={weather.city}
+        currentTemp={weather.currentTemp}
+        currentLabel={weather.currentLabel}
+        forecast={weather.forecast}
       />
     </Cell>
 
