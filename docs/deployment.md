@@ -203,6 +203,30 @@ Trigger manually:
 sudo systemctl start haven-autopull.service
 ```
 
+### Webhook trigger (faster than the 4h timer)
+
+Set `HAVEN_DEPLOY_TOKEN` in `/etc/haven/.env` to a strong random string
+(`openssl rand -hex 32`) and restart the backend. Then any push from
+your laptop can fire an immediate deploy:
+
+```bash
+git push && curl -fsS -X POST https://haven.ctomichael.io/api/deploy \
+  -H "Authorization: Bearer $HAVEN_DEPLOY_TOKEN"
+```
+
+How it works: the endpoint touches `/var/haven/.deploy-pending`, a
+systemd `.path` unit (`haven-deploy-trigger.path`) watches that file
+and fires `haven-autopull.service`. No sudo, no shell-out from the
+backend, no extra long-running process. Tail it with:
+
+```bash
+journalctl -u haven-autopull -f
+```
+
+The endpoint is public — the bearer token is the only barrier, so keep
+it secret and rotate by editing `/etc/haven/.env` and restarting the
+backend.
+
 ### Hermes-dispatched widget commits
 
 Hermes invokes Claude Code with a plan envelope; Claude Code edits
@@ -291,7 +315,8 @@ curl -sS -X POST http://127.0.0.1:8080/api/voice/transcribe \
 | Action                              | Command                                              |
 |-------------------------------------|------------------------------------------------------|
 | Deploy now                          | `sudo make deploy`                                   |
-| Trigger autopull                    | `sudo systemctl start haven-autopull.service`        |
+| Trigger autopull (on-host)          | `sudo systemctl start haven-autopull.service`        |
+| Trigger autopull (remote)           | `curl -X POST $URL/api/deploy -H "Authorization: Bearer $TOKEN"` |
 | Check service status                | `systemctl status haven-backend haven-dashboard`     |
 | Tail all logs                       | `journalctl -u haven-* -u caddy -f`                  |
 | Inspect Postgres                    | `make db-psql`                                       |

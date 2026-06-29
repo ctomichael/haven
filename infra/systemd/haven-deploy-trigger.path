@@ -1,0 +1,12 @@
+[Unit]
+Description=Haven deploy trigger — watches /var/haven/.deploy-pending
+Documentation=https://github.com/ctomichael/haven
+
+[Path]
+# Fires when the file is closed after being written. The backend touches
+# this in response to POST /api/deploy.
+PathChanged=/var/haven/.deploy-pending
+Unit=haven-autopull.service
+
+[Install]
+WantedBy=multi-user.target

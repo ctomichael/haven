@@ -151,6 +151,9 @@ if ! id "$HAVEN_USER" >/dev/null 2>&1; then
   useradd --system --shell /bin/false --home "$HAVEN_DATA_DIR" "$HAVEN_USER"
 fi
 mkdir -p "$HAVEN_DATA_DIR/attachments" "$HAVEN_DATA_DIR/backups"
+# Sentinel file watched by haven-deploy-trigger.path. Must exist before
+# the path unit can monitor it; backend will rewrite on each deploy hit.
+touch "$HAVEN_DATA_DIR/.deploy-pending"
 chown -R "$HAVEN_USER:$HAVEN_USER" "$HAVEN_DATA_DIR"
 
 # Allow haven user to talk to docker (Postgres container management)
@@ -198,10 +201,13 @@ sudo -u "$HAVEN_USER" -H sh -c "cd '$REPO_DIR' && /usr/local/bin/bun --filter @h
 log "Installing systemd units"
 cp "$REPO_DIR/infra/systemd/"*.service /etc/systemd/system/
 cp "$REPO_DIR/infra/systemd/"*.timer /etc/systemd/system/
+cp "$REPO_DIR/infra/systemd/"*.path /etc/systemd/system/
 systemctl daemon-reload
-systemctl enable haven-backend.service haven-dashboard.service haven-autopull.timer >/dev/null
+systemctl enable haven-backend.service haven-dashboard.service \
+  haven-autopull.timer haven-deploy-trigger.path >/dev/null
 systemctl restart haven-backend.service haven-dashboard.service
 systemctl start haven-autopull.timer
+systemctl restart haven-deploy-trigger.path
 
 # ---- 13. Caddyfile --------------------------------------------------------
 

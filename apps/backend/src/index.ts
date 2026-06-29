@@ -11,6 +11,7 @@ import todosRoute from './routes/todos.ts';
 import shoppingRoute from './routes/shopping.ts';
 import { attachmentsUpload, attachmentsServe } from './routes/attachments.ts';
 import voiceRoute from './routes/voice.ts';
+import deployRoute from './routes/deploy.ts';
 
 const PORT = Number(process.env.PORT ?? 8080);
 const STARTED_AT = new Date().toISOString();
@@ -58,6 +59,7 @@ app.route('/api/shopping', shoppingRoute);
 app.route('/api/attachments', attachmentsUpload);
 app.route('/attachments', attachmentsServe);
 app.route('/api/voice', voiceRoute);
+app.route('/api/deploy', deployRoute);
 
 app.get('/api/health', async (c) => {
   const [db, migrations, squawk] = await Promise.all([
