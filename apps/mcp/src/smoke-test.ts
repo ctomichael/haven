@@ -87,9 +87,30 @@ await callAndPrint('event_log', {
   actor: 'smoke-test',
 });
 
+// --- Todos: create → complete → list ------------------------------------
+const todoResult = (await client.callTool({
+  name: 'todo_create',
+  arguments: {
+    title: 'Smoke-test todo: water the plants',
+    tags: ['home'],
+    assignee: 'michael',
+    actor: 'smoke-test',
+  },
+})) as { content: Array<{ type: string; text?: string }>; isError?: boolean };
+const todoC = todoResult.content[0];
+const todoRaw = todoC && todoC.type === 'text' ? todoC.text : undefined;
+const todo = todoRaw ? (JSON.parse(todoRaw) as { id: string }) : null;
+console.log('\n=== todo_create → ===');
+console.log(todo);
+
+if (todo) {
+  await callAndPrint('todo_set_done', { id: todo.id, done: true, actor: 'smoke-test' });
+}
+
 // --- Verify the writes landed -------------------------------------------
 await callAndPrint('inbox_list', { limit: 3 });
 await callAndPrint('event_kinds_list');
+await callAndPrint('todo_list', { limit: 3 });
 
 await client.close();
 process.exit(0);

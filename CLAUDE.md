@@ -72,6 +72,17 @@ All UI uses tokens from the design system. No raw colours, no shadows, no animat
 - Commit your changes before exiting. Message format: `<verb>: <slug> — <task_id>` (e.g. `widget: bin_day — task_abc123`).
 - After commit, call `dashboard_reload(reason="<short>", surface="<wall|phone|all>")` via HouseholdMCP. This SSE-pushes the reload to connected surfaces.
 
+### Keep documentation current on every push
+
+Treat docs as part of the change, not an afterthought. **Any time you push, the documentation must reflect what you pushed.** If a change touches behaviour, commands, the MCP tool surface, the data model, or the deploy pipeline, update the relevant doc **in the same commit** as the code. Check whether your change affects any of:
+
+- [`README.md`](README.md) — setup, scripts, quick start, ports
+- This file (`CLAUDE.md`) — repo conventions, layout, deployment commands
+- [`docs/deployment.md`](docs/deployment.md) — production topology + commands
+- [`design/mcp-contract.md`](design/mcp-contract.md) — the MCP tool surface and data-strategy tiers (update it when you add or change an MCP tool)
+
+A push that leaves the docs describing the old behaviour is incomplete. When in doubt, add the note — stale docs cost more than a redundant line.
+
 ## Development
 
 ```bash

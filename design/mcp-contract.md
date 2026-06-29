@@ -90,15 +90,19 @@ Every error returns `{error: {code, message, details?}}`. Codes:
 
 ### Todos
 
-| Tool | Args | Returns | Caller | Risk |
-|---|---|---|---|---|
-| `todo_create` | `title, due_at?, assignee_user_id?, visibility?, source_inbox_id?, tags?` | `{id}` | Hermes | `write_low` |
-| `todo_list` | `filter?, limit=100` | `[todo]` | Any | `read` |
-| `todo_complete` | `id, done_at?` | `{ok}` | Hermes, dashboard | `write_low` |
-| `todo_update` | `id, patch` | `{ok}` | Hermes | `write_low` |
-| `todo_delete` | `id, reason` | `{ok}` | Hermes | `destructive` |
+| Tool | Args | Returns | Caller | Risk | Status |
+|---|---|---|---|---|---|
+| `todo_list` | `done?, limit=200` | `{todos:[todo]}` | Any | `read` | **live** |
+| `todo_create` | `title, due_at?, tags?, visibility?, assignee?, source_inbox_id?` | `todo` | Hermes, dashboard | `write_low` | **live** |
+| `todo_set_done` | `id, done` | `todo` | Hermes, dashboard | `write_low` | **live** |
+| `todo_update` | `id, patch` | `{ok}` | Hermes | `write_low` | planned |
+| `todo_delete` | `id, reason` | `{ok}` | Hermes | `destructive` | planned |
 
-`filter` accepts `{assignee, visibility, done, due_before, due_after, tag, q}`.
+`assignee` is a user handle (`michael`, `fiona`), resolved to `assignee_user_id`
+server-side — the same convention as the `/api/todos` REST route. Each todo is
+returned with a derived `done` boolean alongside the raw `done_at` timestamp.
+Richer `todo_list` filtering (`due_before`, `tag`, `q`, …) lands with
+`todo_update` when the write-med approval flow does.
 
 ### Notes (markdown files in git repo)
 

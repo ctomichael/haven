@@ -7,8 +7,7 @@
   import DashboardGrid from '$lib/components/DashboardGrid.svelte';
   import Cell from '$lib/components/Cell.svelte';
   import { Plus } from 'lucide-svelte';
-  import { goto } from '$app/navigation';
-  import { patchTodo, todoAccent, type ApiTodo } from '$lib/api';
+  import { createTodo, patchTodo, todoAccent, type ApiTodo } from '$lib/api';
 
   let { data }: { data: { todos: ApiTodo[] } } = $props();
 
@@ -18,6 +17,33 @@
   });
 
   let filter = $state<'all' | 'home' | 'errands' | 'kids'>('all');
+
+  // New-todo input. The active filter seeds the tag so an item added while
+  // "Kids" is selected stays in that view.
+  let newTitle = $state('');
+  let adding = $state(false);
+
+  const filterTags: Record<Exclude<typeof filter, 'all'>, string[]> = {
+    home: ['home'],
+    errands: ['errands'],
+    kids: ['kids'],
+  };
+
+  async function addTodo() {
+    const title = newTitle.trim();
+    if (!title || adding) return;
+    adding = true;
+    const tags = filter === 'all' ? [] : filterTags[filter];
+    try {
+      const created = await createTodo({ title, tags });
+      items = [created, ...items];
+      newTitle = '';
+    } catch {
+      // Leave the text in place so the user can retry.
+    } finally {
+      adding = false;
+    }
+  }
 
   const accentToFilter = {
     sage: 'home',
@@ -86,10 +112,19 @@
     {/each}
   </DashboardGrid>
 
-  <button type="button" class="add" onclick={() => goto('/capture')}>
-    <Plus size={28} strokeWidth={2.5} />
-    Add to-do
-  </button>
+  <form class="add" onsubmit={(e) => { e.preventDefault(); addTodo(); }}>
+    <input
+      class="add-input"
+      type="text"
+      bind:value={newTitle}
+      placeholder="Add a to-do…"
+      autocomplete="off"
+      enterkeyhint="done"
+    />
+    <button type="submit" class="add-submit" aria-label="Add to-do" disabled={!newTitle.trim() || adding}>
+      <Plus size={28} strokeWidth={2.5} />
+    </button>
+  </form>
 </SubScreen>
 
 <style>
@@ -129,14 +164,39 @@
     border: var(--border-normal) dashed var(--ink);
     background: var(--paper);
     color: var(--ink);
+    display: flex;
+    align-items: stretch;
+    box-sizing: border-box;
+  }
+  .add-input {
+    flex: 1;
+    min-width: 0;
+    border: none;
+    background: transparent;
+    color: var(--ink);
+    padding: 0 20px;
+    font-family: var(--font-sans);
+    font-weight: 500;
+    font-size: 22px;
+  }
+  .add-input::placeholder {
+    color: var(--muted-mono);
+    opacity: 1;
+  }
+  .add-input:focus {
+    outline: none;
+  }
+  .add-submit {
+    flex: 0 0 72px;
+    border: none;
+    border-left: var(--border-thin) dashed var(--ink);
+    background: var(--paper);
+    color: var(--ink);
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 14px;
-    font-family: var(--font-sans);
-    font-weight: 700;
-    font-size: 16px;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
+  }
+  .add-submit:disabled {
+    color: var(--muted-mono);
   }
 </style>

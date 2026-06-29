@@ -28,6 +28,14 @@ import {
   widgetGetSchema,
 } from './tools/widgets.ts';
 import { userList, userListSchema, deviceList, deviceListSchema } from './tools/users.ts';
+import {
+  todoList,
+  todoListSchema,
+  todoCreate,
+  todoCreateSchema,
+  todoSetDone,
+  todoSetDoneSchema,
+} from './tools/todos.ts';
 
 const server = new McpServer({
   name: SERVER_NAME,
@@ -92,6 +100,24 @@ server.tool(
   'Append a new capture to raw_inbox. Resolves actor + device handles to ids.',
   inboxAppendSchema,
   withAudit('inbox_append', inboxAppend as ToolFn),
+);
+server.tool(
+  'todo_list',
+  'List todos with an optional done filter. Newest-open-first ordering.',
+  todoListSchema,
+  withAudit('todo_list', todoList as ToolFn),
+);
+server.tool(
+  'todo_create',
+  'Create a todo. Resolves the assignee handle to a user id; optionally links the source_inbox_id it was filed from.',
+  todoCreateSchema,
+  withAudit('todo_create', todoCreate as ToolFn),
+);
+server.tool(
+  'todo_set_done',
+  'Mark a todo done or re-open it by id.',
+  todoSetDoneSchema,
+  withAudit('todo_set_done', todoSetDone as ToolFn),
 );
 server.tool(
   'event_kinds_list',
