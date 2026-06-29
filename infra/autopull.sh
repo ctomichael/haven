@@ -27,6 +27,17 @@ fi
 log "Pulling $OLD → $NEW"
 sudo -u "$HAVEN_USER" -H git pull --ff-only --quiet origin "$BRANCH"
 
+# After the pull this script might have changed on disk (e.g. a bug fix
+# to the build command below). The shell is still executing the OLD
+# in-memory copy, so exec ourselves to pick up the new content before
+# touching anything else. The HAVEN_AUTOPULL_REEXECED guard prevents
+# an infinite loop if exec fails or the new script also calls exec.
+if [ -z "${HAVEN_AUTOPULL_REEXECED:-}" ]; then
+  log "Re-execing with the freshly-pulled script"
+  HAVEN_AUTOPULL_REEXECED=1 export HAVEN_AUTOPULL_REEXECED
+  exec "$0" "$@"
+fi
+
 log "bun install --frozen-lockfile"
 sudo -u "$HAVEN_USER" -H sh -c "cd '$REPO_DIR' && /usr/local/bin/bun install --frozen-lockfile"
 
