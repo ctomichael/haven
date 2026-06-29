@@ -1,5 +1,28 @@
 import type { Accent } from './tokens';
 
+// ----- Home Assistant --------------------------------------------------
+
+export type HaEntity = {
+  entity_id: string;
+  state: string;
+  unit: string | null;
+  device_class: string | null;
+  friendly_name: string | null;
+  last_changed: string;
+};
+
+export async function fetchHaEntities(
+  ids: string[],
+  fetchFn: typeof fetch = fetch,
+): Promise<HaEntity[]> {
+  if (ids.length === 0) return [];
+  const q = new URLSearchParams({ ids: ids.join(',') });
+  const res = await fetchFn(`/api/ha/entities?${q.toString()}`);
+  if (!res.ok) throw new Error(`fetchHaEntities failed: HTTP ${res.status}`);
+  const data = (await res.json()) as { entities: HaEntity[] };
+  return data.entities;
+}
+
 // ----- Weather ---------------------------------------------------------
 
 export type ApiForecastDay = {

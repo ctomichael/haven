@@ -19,12 +19,20 @@
   import { patchTodo, type ApiTodo, type ApiShoppingItem, type ApiWeather } from '$lib/api';
 
   let { data }: {
-    data: { todos: ApiTodo[]; shopping: ApiShoppingItem[]; weather: ApiWeather | null };
+    data: {
+      todos: ApiTodo[];
+      shopping: ApiShoppingItem[];
+      weather: ApiWeather | null;
+      sensors: typeof dummy.sensors | null;
+    };
   } = $props();
 
   // Live weather when the backend reached MetService; dummy as the offline
   // fallback.
   let weather = $derived(data.weather ?? dummy.weather);
+
+  // Live room temps from Home Assistant; dummy as the offline fallback.
+  let sensors = $derived(data.sensors ?? dummy.sensors);
 
   // Local live state — initialised from the load() data, mutated optimistically
   // on toggle. SvelteKit re-runs load() on navigation, so we re-sync there too.
@@ -132,9 +140,9 @@
       />
     </Cell>
 
-    <Cell w={2}><SensorTile sensor={dummy.sensors[0]} /></Cell>
-    <Cell w={2}><SensorTile sensor={dummy.sensors[1]} /></Cell>
-    <Cell w={2}><SensorTile sensor={dummy.sensors[2]} /></Cell>
+    <Cell w={2}><SensorTile sensor={sensors[0]} /></Cell>
+    <Cell w={2}><SensorTile sensor={sensors[1]} /></Cell>
+    <Cell w={2}><SensorTile sensor={sensors[2]} /></Cell>
     <Cell w={6}><CaptureButton onclick={() => goto('/capture')} /></Cell>
   </DashboardGrid>
 
