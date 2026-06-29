@@ -4,6 +4,20 @@ import { sql } from '../client.ts';
 import { ACTOR } from '../schemas.ts';
 import { resolveUserId } from './inbox.ts';
 
+// Push a reload to every connected surface. The backend LISTENs on this
+// Postgres channel and fans it out over SSE — see apps/backend/src/events.ts.
+// Best-effort: a missed reload must never fail the write that triggered it.
+async function notifyReload(reason: string): Promise<void> {
+  try {
+    await sql.notify(
+      'haven_reload',
+      JSON.stringify({ type: 'dashboard:reload', reason, surface: 'all' }),
+    );
+  } catch {
+    /* swallow — the write already succeeded */
+  }
+}
+
 // Row shape from the DB; the tool surfaces a derived `done` boolean,
 // mirroring the backend REST presenter so agents see the same fields.
 type TodoRow = {
@@ -103,6 +117,7 @@ export async function todoCreate(args: {
     )
     ${RETURNING}
   `;
+  await notifyReload('todo_create');
   return present(inserted[0]!);
 }
 
@@ -126,5 +141,6 @@ export async function todoSetDone(args: { id: string; done: boolean }) {
     (err as { code?: string }).code = 'not_found';
     throw err;
   }
+  await notifyReload('todo_set_done');
   return present(rows[0]!);
 }

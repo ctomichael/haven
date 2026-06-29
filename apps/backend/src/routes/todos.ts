@@ -4,6 +4,7 @@ import { z } from 'zod';
 
 import { audit } from '../audit.ts';
 import { sql } from '../db/client.ts';
+import { notifyReload } from '../events.ts';
 
 const todos = new Hono();
 
@@ -88,6 +89,7 @@ todos.post('/', zValidator('json', CreateBody), async (c) => {
       returning id, title, notes, due_at, done_at, assignee_user_id, visibility,
                 tags, source_inbox_id, created_at, updated_at
     `;
+    await notifyReload({ reason: 'todo_create' });
     return c.json(present(inserted[0]!), 201);
   } catch (e) {
     status = 'error';
@@ -142,6 +144,7 @@ todos.patch(
         errorDetail = { error: 'not_found' };
         return c.json({ error: 'not_found' }, 404);
       }
+      await notifyReload({ reason: 'todo_update' });
       return c.json(present(rows[0]!));
     } catch (e) {
       status = 'error';

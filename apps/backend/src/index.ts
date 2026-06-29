@@ -13,6 +13,7 @@ import { attachmentsUpload, attachmentsServe } from './routes/attachments.ts';
 import voiceRoute from './routes/voice.ts';
 import deployRoute from './routes/deploy.ts';
 import weatherRoute from './routes/weather.ts';
+import { startReloadBridge, subscribe, type DashboardEvent } from './events.ts';
 
 const PORT = Number(process.env.PORT ?? 8080);
 const STARTED_AT = new Date().toISOString();
@@ -46,6 +47,10 @@ async function runMigrationsOnBoot(): Promise<void> {
   }
 }
 runMigrationsOnBoot();
+
+// Bridge the Postgres reload channel onto the in-process SSE bus, so writes
+// from the MCP server (a separate process) push a refresh to every surface.
+startReloadBridge();
 
 const app = new Hono();
 
@@ -93,8 +98,8 @@ app.get('/api/health', async (c) => {
   });
 });
 
-// SSE: heartbeat every 3s plus a one-shot 'hello' on connect.
-// This is the channel the dashboard subscribes to for 'dashboard:reload' and live updates later.
+// SSE: a one-shot 'hello' on connect, 'dashboard:reload' events pushed from
+// the reload bus (NOTIFY haven_reload), and a heartbeat every 3s otherwise.
 app.get('/api/events', (c) =>
   streamSSE(c, async (stream) => {
     let id = 0;
@@ -103,13 +108,48 @@ app.get('/api/events', (c) =>
       event: 'hello',
       data: JSON.stringify({ service: 'haven-backend', started_at: STARTED_AT }),
     });
-    while (!stream.aborted) {
-      await stream.writeSSE({
-        id: String(id++),
-        event: 'heartbeat',
-        data: JSON.stringify({ ts: new Date().toISOString() }),
-      });
-      await stream.sleep(3000);
+
+    // Buffer events arriving between loop iterations; `wake` lets a fresh
+    // event cut the 3s heartbeat wait short so reloads feel instant.
+    const pending: DashboardEvent[] = [];
+    let wake: (() => void) | null = null;
+    const unsubscribe = subscribe((e) => {
+      pending.push(e);
+      wake?.();
+    });
+
+    try {
+      while (!stream.aborted) {
+        while (pending.length) {
+          const e = pending.shift()!;
+          await stream.writeSSE({
+            id: String(id++),
+            event: e.type,
+            data: JSON.stringify(e),
+          });
+        }
+        // Wait up to 3s for the next event, then fall through to heartbeat.
+        await new Promise<void>((resolve) => {
+          const timer = setTimeout(() => {
+            wake = null;
+            resolve();
+          }, 3000);
+          wake = () => {
+            clearTimeout(timer);
+            wake = null;
+            resolve();
+          };
+        });
+        if (!pending.length && !stream.aborted) {
+          await stream.writeSSE({
+            id: String(id++),
+            event: 'heartbeat',
+            data: JSON.stringify({ ts: new Date().toISOString() }),
+          });
+        }
+      }
+    } finally {
+      unsubscribe();
     }
   }),
 );

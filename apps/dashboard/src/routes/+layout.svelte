@@ -2,6 +2,7 @@
   import '../app.css';
   import type { Surface } from '$lib/surface';
   import { onDestroy, onMount } from 'svelte';
+  import { invalidateAll } from '$app/navigation';
 
   let { children } = $props();
 
@@ -45,6 +46,23 @@
         storedStartedAt = data.started_at;
       } catch {
         /* malformed payload — ignore */
+      }
+    });
+
+    // Live data push: a write elsewhere (MCP, or another surface via the
+    // backend) fires NOTIFY haven_reload → this event. Re-run load()
+    // functions to pull fresh data — no full page reload, so no flash.
+    es.addEventListener('dashboard:reload', (event: MessageEvent) => {
+      try {
+        const data = JSON.parse(event.data) as { surface?: 'wall' | 'phone' | 'all' };
+        const target = data.surface ?? 'all';
+        const mine = surface === 'eink' ? 'wall' : 'phone';
+        if (target === 'all' || target === mine) {
+          invalidateAll();
+        }
+      } catch {
+        /* malformed payload — refresh anyway */
+        invalidateAll();
       }
     });
   });
