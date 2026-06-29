@@ -53,18 +53,6 @@ app.use('/api/*', cors({ origin: ['http://localhost:5173', 'http://localhost:417
 
 app.get('/', (c) => c.text('Haven backend — see /api/health'));
 
-// Sentinel endpoint for verifying that deploys actually propagated.
-// Bump this string per deploy if you want to eyeball it; otherwise the
-// presence of the route alone confirms the new build is live.
-app.get('/api/ping', (c) =>
-  c.json({
-    pong: true,
-    sentinel: 'deploy-webhook-test-2026-06-29',
-    started_at: STARTED_AT,
-    now: new Date().toISOString(),
-  }),
-);
-
 app.route('/api/inbox', inboxRoute);
 app.route('/api/todos', todosRoute);
 app.route('/api/shopping', shoppingRoute);
