@@ -1,5 +1,29 @@
 import type { Accent } from './tokens';
 
+// ----- Calendar (ICS) --------------------------------------------------
+
+export type ApiCalEvent = {
+  id: string;
+  title: string;
+  start: string; // ISO
+  end: string; // ISO
+  allDay: boolean;
+  location: string | null;
+};
+
+export async function fetchCalendar(
+  from: Date | string,
+  to: Date | string,
+  fetchFn: typeof fetch = fetch,
+): Promise<ApiCalEvent[]> {
+  const iso = (v: Date | string) => (typeof v === 'string' ? v : v.toISOString());
+  const q = new URLSearchParams({ from: iso(from), to: iso(to) });
+  const res = await fetchFn(`/api/calendar/events?${q.toString()}`);
+  if (!res.ok) throw new Error(`fetchCalendar failed: HTTP ${res.status}`);
+  const data = (await res.json()) as { events: ApiCalEvent[] };
+  return data.events;
+}
+
 // ----- Home Assistant --------------------------------------------------
 
 export type HaEntity = {

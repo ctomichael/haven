@@ -24,6 +24,7 @@
       shopping: ApiShoppingItem[];
       weather: ApiWeather | null;
       sensors: typeof dummy.sensors | null;
+      calendar: typeof dummy.calendar | null;
     };
   } = $props();
 
@@ -33,6 +34,9 @@
 
   // Live room temps from Home Assistant; dummy as the offline fallback.
   let sensors = $derived(data.sensors ?? dummy.sensors);
+
+  // Today's events from the ICS feed; dummy as the offline fallback.
+  let calendar = $derived(data.calendar ?? dummy.calendar);
 
   // Local live state — initialised from the load() data, mutated optimistically
   // on toggle. SvelteKit re-runs load() on navigation, so we re-sync there too.
@@ -120,7 +124,7 @@
     </Cell>
 
     <Cell w={5}>
-      <CalendarToday events={dummy.calendar} onOpen={() => goto('/calendar')} />
+      <CalendarToday events={calendar} onOpen={() => goto('/calendar')} />
     </Cell>
     <Cell w={4}>
       <TodoList

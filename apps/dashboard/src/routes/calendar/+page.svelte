@@ -1,103 +1,180 @@
 <script lang="ts">
+  import { goto } from '$app/navigation';
+  import { ChevronLeft, ChevronRight } from 'lucide-svelte';
   import SubScreen from '$lib/components/SubScreen.svelte';
   import AccentDot from '$lib/components/AccentDot.svelte';
-  import { dummy } from '$lib/dummy';
+  import type { ApiCalEvent } from '$lib/api';
+  import { parseYMD, addDays, localYMD, hhmm, accentFor, onLocalDate } from '$lib/calendar';
 
-  // 7-day strip starting Monday of this week. The current day gets the
-  // amber underline. Density dots are dummy for now.
-  const weekDays = (() => {
-    const today = new Date();
-    const dayOfWeek = (today.getDay() + 6) % 7; // 0 = Mon
-    const monday = new Date(today);
-    monday.setDate(today.getDate() - dayOfWeek);
-    const days: { label: string; dayNum: number; today: boolean; dots: Array<{ accent: 'sky' | 'amber' | 'sage' }> }[] = [];
-    for (let i = 0; i < 7; i++) {
-      const d = new Date(monday);
-      d.setDate(monday.getDate() + i);
-      days.push({
-        label: d.toLocaleDateString('en-GB', { weekday: 'short' }).toUpperCase(),
+  let { data }: {
+    data: { selectedYMD: string; weekStartYMD: string; events: ApiCalEvent[] | null };
+  } = $props();
+
+  const nowYMD = localYMD(new Date());
+  const now = new Date();
+
+  let events = $derived(data.events ?? []);
+  let notConnected = $derived(data.events === null);
+
+  // Seven-day strip for the week containing the selected date.
+  let weekDays = $derived(
+    Array.from({ length: 7 }, (_, i) => {
+      const d = addDays(parseYMD(data.weekStartYMD), i);
+      const ymd = localYMD(d);
+      const dayEvents = events.filter((e) => onLocalDate(e, ymd));
+      return {
+        ymd,
+        dow: d.toLocaleDateString('en-GB', { weekday: 'short' }).toUpperCase(),
         dayNum: d.getDate(),
-        today: i === dayOfWeek,
-        // Pretend density — varied per day
-        dots: [
-          { accent: 'sky' as const },
-          ...(i % 2 === 0 ? [{ accent: 'amber' as const }] : []),
-          ...(i === 1 || i === 3 ? [{ accent: 'sage' as const }] : []),
-        ],
-      });
-    }
-    return days;
-  })();
-
-  let weekMeta = $derived(
-    `WEEK ${(() => {
-      const a = new Date();
-      const start = new Date(a.getFullYear(), 0, 1);
-      const diff = (a.getTime() - start.getTime()) / 86400000;
-      return Math.ceil((diff + start.getDay() + 1) / 7);
-    })()} · ${new Date().toLocaleDateString('en-GB', { month: 'long' }).toUpperCase()}`,
+        isToday: ymd === nowYMD,
+        isSelected: ymd === data.selectedYMD,
+        dots: dayEvents.slice(0, 3).map((e) => accentFor(e.title)),
+      };
+    }),
   );
+
+  // Agenda for the selected day.
+  let agenda = $derived(
+    events
+      .filter((e) => onLocalDate(e, data.selectedYMD))
+      .map((e) => ({
+        id: e.id,
+        allDay: e.allDay,
+        time: e.allDay ? 'All day' : hhmm(e.start),
+        startMs: new Date(e.start).getTime(),
+        accent: accentFor(e.title),
+        title: e.title,
+        sub: e.location ?? undefined,
+        past: new Date(e.end) <= now && data.selectedYMD === nowYMD,
+      }))
+      .sort((a, b) => Number(b.allDay) - Number(a.allDay) || a.startMs - b.startMs),
+  );
+
+  // "Up next" = first non-past timed event, only when viewing today.
+  let nextId = $derived(
+    data.selectedYMD === nowYMD ? agenda.find((e) => !e.past && !e.allDay)?.id : undefined,
+  );
+
+  let selectedLabel = $derived(
+    parseYMD(data.selectedYMD).toLocaleDateString('en-GB', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+    }),
+  );
+  let meta = $derived(
+    parseYMD(data.weekStartYMD)
+      .toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })
+      .toUpperCase(),
+  );
+
+  function go(ymd: string) {
+    goto(`/calendar?date=${ymd}`, { keepFocus: true, noScroll: true });
+  }
+  const shift = (days: number) => go(localYMD(addDays(parseYMD(data.selectedYMD), days)));
 </script>
 
-<SubScreen title="Calendar" meta={weekMeta}>
-  <section class="strip">
-    {#each weekDays as d (d.label + d.dayNum)}
-      <div class="day" class:today={d.today}>
-        <span class="dow">{d.label}</span>
-        <span class="num">{d.dayNum}</span>
-        <span class="dots">
-          {#each d.dots as dot, i (i)}
-            <AccentDot accent={dot.accent} size={8} />
-          {/each}
-        </span>
-      </div>
-    {/each}
+<SubScreen title="Calendar" {meta}>
+  <section class="nav">
+    <button class="chev" onclick={() => shift(-7)} aria-label="Previous week">
+      <ChevronLeft size={22} strokeWidth={2.5} />
+    </button>
+    <div class="strip">
+      {#each weekDays as d (d.ymd)}
+        <button
+          class="day"
+          class:today={d.isToday}
+          class:selected={d.isSelected}
+          onclick={() => go(d.ymd)}
+        >
+          <span class="dow">{d.dow}</span>
+          <span class="num">{d.dayNum}</span>
+          <span class="dots">
+            {#each d.dots as dot, i (i)}
+              <AccentDot accent={dot} size={7} />
+            {/each}
+          </span>
+        </button>
+      {/each}
+    </div>
+    <button class="chev" onclick={() => shift(7)} aria-label="Next week">
+      <ChevronRight size={22} strokeWidth={2.5} />
+    </button>
   </section>
 
   <section class="agenda">
-    <span class="caption">Agenda</span>
-    <ul>
-      {#each dummy.agenda as e (e.id)}
-        <li class:past={e.past} class:next={e.isNext}>
-          {#if e.isNext}<span class="next-bar" aria-hidden="true"></span>{/if}
-          <span class="time">{e.start}</span>
-          <span class="dot-wrap"><AccentDot accent={e.accent} size={10} /></span>
-          <span class="title">{e.title}</span>
-          {#if e.sub}<span class="sub">{e.sub}</span>{/if}
-        </li>
-      {/each}
-    </ul>
-  </section>
+    <header class="agenda-head">
+      <span class="caption">{selectedLabel}</span>
+      <div class="quick">
+        <button class="link" onclick={() => shift(-1)}>‹ Day</button>
+        <button class="link" onclick={() => go(nowYMD)}>Today</button>
+        <button class="link" onclick={() => shift(1)}>Day ›</button>
+      </div>
+    </header>
 
-  <footer class="legend">
-    <span class="legend-item"><AccentDot accent="sky" size={10} /> Work</span>
-    <span class="legend-item"><AccentDot accent="amber" size={10} /> Family</span>
-    <span class="legend-item"><AccentDot accent="sage" size={10} /> Personal</span>
-  </footer>
+    {#if notConnected}
+      <p class="empty">Calendar not connected.</p>
+    {:else if agenda.length === 0}
+      <p class="empty">Nothing scheduled.</p>
+    {:else}
+      <ul>
+        {#each agenda as e (e.id)}
+          <li class:past={e.past} class:next={e.id === nextId}>
+            {#if e.id === nextId}<span class="next-bar" aria-hidden="true"></span>{/if}
+            <span class="time" class:allday={e.allDay}>{e.time}</span>
+            <span class="dot-wrap"><AccentDot accent={e.accent} size={10} /></span>
+            <span class="title">{e.title}</span>
+            {#if e.sub}<span class="sub">{e.sub}</span>{/if}
+          </li>
+        {/each}
+      </ul>
+    {/if}
+  </section>
 </SubScreen>
 
 <style>
+  .nav {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: stretch;
+    gap: 8px;
+  }
+  .chev {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    border: var(--border-normal) solid var(--hairline);
+    background: var(--paper);
+    color: var(--ink);
+  }
   .strip {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
-    gap: 0;
     border-top: var(--border-normal) solid var(--ink);
     border-bottom: var(--border-normal) solid var(--ink);
   }
   .day {
-    padding: 14px 16px 12px;
+    padding: 12px 14px 10px;
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 5px;
+    align-items: flex-start;
+    background: var(--paper);
+    border: 0;
     border-right: var(--border-normal) solid var(--hairline-2);
+    color: var(--ink);
+    text-align: left;
   }
   .day:last-child {
     border-right: 0;
   }
-  .day.today {
+  .day.selected {
     background: var(--paper-2);
+  }
+  .day.today {
     border-bottom: var(--border-thick) solid var(--accent-amber);
-    padding-bottom: 8px;
+    padding-bottom: 6px;
   }
   .dow {
     font-family: var(--font-mono);
@@ -108,15 +185,18 @@
   .num {
     font-family: var(--font-mono);
     font-weight: 600;
-    font-size: 28px;
+    font-size: 26px;
     font-variant-numeric: tabular-nums;
     line-height: 1;
   }
+  .day.selected .num {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
   .dots {
     display: inline-flex;
-    gap: 6px;
-    margin-top: 4px;
-    min-height: 8px;
+    gap: 5px;
+    min-height: 7px;
   }
 
   .agenda {
@@ -126,16 +206,43 @@
     display: flex;
     flex-direction: column;
     gap: 14px;
-    padding-top: 8px;
+    padding-top: 6px;
+  }
+  .agenda-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
   }
   .caption {
-    font-family: var(--font-sans);
-    font-weight: 700;
-    font-size: 14px;
+    font-family: var(--font-serif);
+    font-weight: 600;
+    font-size: 22px;
+  }
+  .quick {
+    display: inline-flex;
+    gap: 16px;
+  }
+  .link {
+    border: 0;
+    background: transparent;
+    color: var(--ink-2);
+    font-family: var(--font-mono);
+    font-weight: 600;
+    font-size: 12px;
     letter-spacing: 0.16em;
     text-transform: uppercase;
   }
-  .agenda ul {
+  .empty {
+    font-family: var(--font-mono);
+    font-weight: 600;
+    font-size: 13px;
+    letter-spacing: 0.18em;
+    color: var(--muted-mono);
+    text-transform: uppercase;
+    padding: 8px 0;
+  }
+  ul {
     list-style: none;
     margin: 0;
     padding: 0;
@@ -143,9 +250,9 @@
     flex-direction: column;
     gap: 12px;
   }
-  .agenda li {
+  li {
     display: grid;
-    grid-template-columns: 80px 18px 1fr auto;
+    grid-template-columns: 96px 18px 1fr auto;
     align-items: baseline;
     gap: 16px;
     padding-left: 12px;
@@ -159,15 +266,28 @@
     width: 4px;
     background: var(--accent-amber);
   }
-  .past { opacity: 0.5; }
-  .past .title,
-  .past .sub { text-decoration: line-through; }
+  .past {
+    opacity: 0.5;
+  }
+  .past .title {
+    text-decoration: line-through;
+  }
   .time {
     font-family: var(--font-mono);
     font-weight: 600;
     font-size: 22px;
+    font-variant-numeric: tabular-nums;
   }
-  .dot-wrap { display: inline-flex; align-items: center; }
+  .time.allday {
+    font-size: 13px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted-mono);
+  }
+  .dot-wrap {
+    display: inline-flex;
+    align-items: center;
+  }
   .title {
     font-family: var(--font-sans);
     font-weight: 500;
@@ -179,23 +299,6 @@
     font-size: 12px;
     letter-spacing: 0.18em;
     color: var(--muted-mono);
-    text-transform: uppercase;
-  }
-
-  .legend {
-    display: flex;
-    gap: 28px;
-    padding-top: 12px;
-    border-top: var(--border-normal) solid var(--hairline-2);
-  }
-  .legend-item {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    font-family: var(--font-mono);
-    font-weight: 600;
-    font-size: 12px;
-    letter-spacing: 0.18em;
     text-transform: uppercase;
   }
 </style>

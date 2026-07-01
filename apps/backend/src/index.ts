@@ -14,6 +14,7 @@ import voiceRoute from './routes/voice.ts';
 import deployRoute from './routes/deploy.ts';
 import weatherRoute from './routes/weather.ts';
 import haRoute from './routes/ha.ts';
+import calendarRoute from './routes/calendar.ts';
 import { startReloadBridge, subscribe, type DashboardEvent } from './events.ts';
 
 const PORT = Number(process.env.PORT ?? 8080);
@@ -69,6 +70,7 @@ app.route('/api/voice', voiceRoute);
 app.route('/api/deploy', deployRoute);
 app.route('/api/weather', weatherRoute);
 app.route('/api/ha', haRoute);
+app.route('/api/calendar', calendarRoute);
 
 app.get('/api/health', async (c) => {
   const [db, migrations, squawk] = await Promise.all([

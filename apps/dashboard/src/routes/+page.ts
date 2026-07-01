@@ -1,6 +1,14 @@
 import type { PageLoad } from './$types';
-import { fetchTodos, fetchShopping, fetchWeather, fetchHaEntities, type HaEntity } from '$lib/api';
-import type { Sensor } from '$lib/dummy';
+import {
+  fetchTodos,
+  fetchShopping,
+  fetchWeather,
+  fetchHaEntities,
+  fetchCalendar,
+  type HaEntity,
+} from '$lib/api';
+import type { Sensor, CalendarEvent } from '$lib/dummy';
+import { startOfDay, addDays, toWidgetEvent, markNext } from '$lib/calendar';
 
 // Which HA entities feed the three dashboard temperature tiles. This will move
 // into a widget manifest once the widget system lands; for now it lives here.
@@ -21,7 +29,10 @@ function toSensor(label: string, e: HaEntity | undefined): Sensor {
 export const load: PageLoad = async ({ fetch }) => {
   // Tolerant load — if the backend is down (e.g. you're working offline),
   // serve empty arrays / null so the layout still renders rather than 500ing.
-  const [todos, shopping, weather, haEntities] = await Promise.all([
+  const dayStart = startOfDay(new Date());
+  const dayEnd = addDays(dayStart, 1);
+
+  const [todos, shopping, weather, haEntities, calRaw] = await Promise.all([
     fetchTodos(fetch).catch(() => []),
     fetchShopping(fetch).catch(() => []),
     fetchWeather(fetch).catch(() => null),
@@ -29,7 +40,14 @@ export const load: PageLoad = async ({ fetch }) => {
       SENSOR_TILES.map((s) => s.entity),
       fetch,
     ).catch(() => null),
+    fetchCalendar(dayStart, dayEnd, fetch).catch(() => null),
   ]);
+
+  // Today's events for the widget; null when the ICS feed isn't configured.
+  const now = new Date();
+  const calendar: CalendarEvent[] | null = calRaw
+    ? markNext(calRaw.map((e) => toWidgetEvent(e, now))).slice(0, 6)
+    : null;
 
   // Null when HA is unreachable/unconfigured → page falls back to dummy.
   const sensors: Sensor[] | null = haEntities
@@ -41,5 +59,5 @@ export const load: PageLoad = async ({ fetch }) => {
       )
     : null;
 
-  return { todos, shopping, weather, sensors };
+  return { todos, shopping, weather, sensors, calendar };
 };
