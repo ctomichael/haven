@@ -51,10 +51,14 @@
 <style>
   .bars {
     flex: 1;
-    min-height: 0;
+    /* Guarantee vertical room even when the frame is content-height, so the
+       bars can actually show their relative heights. Grows to fill taller
+       cells too. */
+    min-height: 180px;
     display: grid;
     grid-template-columns: repeat(var(--cols, 7), 1fr);
     gap: 8px;
+    align-content: stretch;
   }
   .col {
     display: flex;
@@ -62,6 +66,7 @@
     align-items: center;
     gap: 8px;
     min-width: 0;
+    min-height: 0;
   }
   .val {
     font-family: var(--font-mono);
