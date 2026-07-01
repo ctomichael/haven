@@ -134,6 +134,9 @@ export type ApiForecastDay = {
   high: number;
   low: number;
   label: string;
+  morning: string | null;
+  afternoon: string | null;
+  evening: string | null;
 };
 
 export type ApiWeather = {

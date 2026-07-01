@@ -1,18 +1,7 @@
 <script lang="ts">
-  import {
-    Sun,
-    Moon,
-    Cloud,
-    CloudSun,
-    CloudRain,
-    CloudDrizzle,
-    CloudSnow,
-    Snowflake,
-    CloudFog,
-    CloudLightning,
-    Wind,
-  } from 'lucide-svelte';
   import WidgetFrame from './WidgetFrame.svelte';
+  import DayGlobe from './DayGlobe.svelte';
+  import { weatherIcon } from '$lib/weatherIcons';
   import type { ForecastDay } from '$lib/dummy';
 
   let {
@@ -27,24 +16,7 @@
     forecast: ForecastDay[];
   } = $props();
 
-  // Map a MetService condition word (Fine, Frost, Few showers, Snow, …) to a
-  // lucide icon. Order matters — more specific words are matched first.
-  function iconFor(label: string) {
-    const l = label.toLowerCase();
-    if (l.includes('thunder')) return CloudLightning;
-    if (l.includes('snow')) return CloudSnow;
-    if (l.includes('frost')) return Snowflake;
-    if (l.includes('drizzle')) return CloudDrizzle;
-    if (l.includes('shower') || l.includes('rain')) return CloudRain;
-    if (l.includes('fog') || l.includes('mist')) return CloudFog;
-    if (l.includes('wind')) return Wind;
-    if (l.includes('part') || l.includes('few')) return CloudSun;
-    if (l.includes('cloud') || l.includes('overcast')) return Cloud;
-    if (l.includes('clear')) return Moon;
-    return Sun; // Fine / Sunny / fallback
-  }
-
-  let Icon = $derived(iconFor(currentLabel));
+  let Icon = $derived(weatherIcon(currentLabel));
 </script>
 
 <WidgetFrame title="Weather" live meta={city}>
@@ -59,11 +31,13 @@
     <div class="forecast">
       {#each forecast as d (d.day)}
         <div class="day">
-          <span class="dow">{d.day}</span>
-          <span class="hi-lo">
-            <span>{d.high}°</span><span class="lo"> / {d.low}°</span>
-          </span>
-          <span class="cond">{d.label}</span>
+          <div class="day-info">
+            <span class="dow">{d.day}</span>
+            <span class="hi-lo">
+              <span>{d.high}°</span><span class="lo"> / {d.low}°</span>
+            </span>
+          </div>
+          <DayGlobe morning={d.morning} afternoon={d.afternoon} evening={d.evening} />
         </div>
       {/each}
     </div>
@@ -107,20 +81,24 @@
   .forecast {
     flex: 1;
     display: flex;
-    gap: 0;
+    flex-direction: column;
     padding-left: 28px;
   }
   .day {
     flex: 1;
-    padding: 0 0 0 22px;
     display: flex;
-    flex-direction: column;
-    gap: 9px;
-    border-left: var(--border-normal) solid var(--hairline-2);
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    border-top: var(--border-thin) solid var(--hairline-2);
   }
   .day:first-child {
-    border-left: 0;
-    padding-left: 0;
+    border-top: 0;
+  }
+  .day-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
   }
   .dow {
     font-family: var(--font-mono);
@@ -138,11 +116,5 @@
   }
   .lo {
     color: var(--muted-mono);
-  }
-  .cond {
-    font-family: var(--font-sans);
-    font-weight: 500;
-    font-size: 17px;
-    color: var(--ink-2);
   }
 </style>

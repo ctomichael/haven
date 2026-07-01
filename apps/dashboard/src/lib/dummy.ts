@@ -43,6 +43,9 @@ export type ForecastDay = {
   high: number;
   low: number;
   label: string;
+  morning?: string | null;
+  afternoon?: string | null;
+  evening?: string | null;
 };
 
 export type Identity = {
@@ -97,9 +100,9 @@ export const dummy = {
     currentTemp: 19,
     currentLabel: 'Bright',
     forecast: [
-      { day: 'TUE', high: 21, low: 12, label: 'Sunny' },
-      { day: 'WED', high: 18, low: 11, label: 'Cloud' },
-      { day: 'THU', high: 15, low: 10, label: 'Showers' },
+      { day: 'TUE', high: 21, low: 12, label: 'Sunny',   morning: 'Fine',   afternoon: 'Sunny',  evening: 'Clear' },
+      { day: 'WED', high: 18, low: 11, label: 'Cloud',   morning: 'Cloudy', afternoon: 'Few showers', evening: 'Cloudy' },
+      { day: 'THU', high: 15, low: 10, label: 'Showers', morning: 'Showers', afternoon: 'Showers', evening: 'Rain' },
     ] satisfies ForecastDay[],
   },
   calendar: [

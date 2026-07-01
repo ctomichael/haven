@@ -28,6 +28,10 @@ export type ForecastDay = {
   high: number;
   low: number;
   label: string;
+  // Part-of-day condition words for the globe icon cluster.
+  morning: string | null;
+  afternoon: string | null;
+  evening: string | null;
 };
 
 export type WeatherPayload = {
@@ -114,11 +118,15 @@ function mapForecast(forecast: LocalForecast): ForecastDay[] {
       const high = toNumber(d.max);
       const low = toNumber(d.min);
       if (high === null || low === null || !d.dowTLA) return null;
+      const pd = d.partDayData;
       return {
         day: d.dowTLA.toUpperCase(),
         high,
         low,
         label: d.forecastWord ?? '—',
+        morning: pd?.morning?.forecastWord ?? null,
+        afternoon: pd?.afternoon?.forecastWord ?? null,
+        evening: pd?.evening?.forecastWord ?? null,
       };
     })
     .filter((d): d is ForecastDay => d !== null);
