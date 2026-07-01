@@ -3,23 +3,47 @@
   import AccentChip from './AccentChip.svelte';
   import type { Sensor } from '$lib/dummy';
 
-  let { sensor }: { sensor: Sensor } = $props();
+  let { sensor, onOpen }: { sensor: Sensor; onOpen?: () => void } = $props();
 </script>
 
-<WidgetFrame title={sensor.label} live>
-  <div class="row">
-    <span class="value">{sensor.value}</span>
-    <span class="unit">{sensor.unit}</span>
-    {#if sensor.state === 'warn' && sensor.warnText}
-      <span class="chip-wrap">
-        <AccentChip accent="amber" label={sensor.warnText} />
-      </span>
-    {/if}
-  </div>
-  <div class="sub">Indoor temp</div>
-</WidgetFrame>
+{#snippet body()}
+  <WidgetFrame title={sensor.label} live>
+    <div class="row">
+      <span class="value">{sensor.value}</span>
+      <span class="unit">{sensor.unit}</span>
+      {#if sensor.state === 'warn' && sensor.warnText}
+        <span class="chip-wrap">
+          <AccentChip accent="amber" label={sensor.warnText} />
+        </span>
+      {/if}
+    </div>
+    <div class="sub">Indoor temp</div>
+  </WidgetFrame>
+{/snippet}
+
+{#if onOpen}
+  <button class="tile tappable" type="button" onclick={onOpen}>{@render body()}</button>
+{:else}
+  <div class="tile">{@render body()}</div>
+{/if}
 
 <style>
+  .tile {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+  }
+  .tile.tappable {
+    cursor: pointer;
+  }
   .row {
     display: flex;
     align-items: center;

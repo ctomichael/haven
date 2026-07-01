@@ -12,8 +12,10 @@
   import TodoList from '$lib/components/TodoList.svelte';
   import ShoppingList from '$lib/components/ShoppingList.svelte';
   import SensorTile from '$lib/components/SensorTile.svelte';
+  import SensorHistoryModal from '$lib/components/SensorHistoryModal.svelte';
   import CaptureButton from '$lib/components/CaptureButton.svelte';
   import StatusBar from '$lib/components/StatusBar.svelte';
+  import { SENSOR_TILES } from '$lib/sensors';
 
   import { dummy } from '$lib/dummy';
   import { patchTodo, type ApiTodo, type ApiShoppingItem, type ApiWeather } from '$lib/api';
@@ -37,6 +39,9 @@
 
   // Today's events from the ICS feed; dummy as the offline fallback.
   let calendar = $derived(data.calendar ?? dummy.calendar);
+
+  // Temperature-history modal — set to the tapped tile's entity + label.
+  let openTile = $state<{ entity: string; label: string; unit: string } | null>(null);
 
   // Local live state — initialised from the load() data, mutated optimistically
   // on toggle. SvelteKit re-runs load() on navigation, so we re-sync there too.
@@ -144,9 +149,21 @@
       />
     </Cell>
 
-    <Cell w={2}><SensorTile sensor={sensors[0]} /></Cell>
-    <Cell w={2}><SensorTile sensor={sensors[1]} /></Cell>
-    <Cell w={2}><SensorTile sensor={sensors[2]} /></Cell>
+    {#each sensors as sensor, i (SENSOR_TILES[i]?.entity ?? i)}
+      <Cell w={2}>
+        <SensorTile
+          {sensor}
+          onOpen={SENSOR_TILES[i]
+            ? () =>
+                (openTile = {
+                  entity: SENSOR_TILES[i]!.entity,
+                  label: sensor.label,
+                  unit: sensor.unit,
+                })
+            : undefined}
+        />
+      </Cell>
+    {/each}
     <Cell w={6}><CaptureButton onclick={() => goto('/capture')} /></Cell>
   </DashboardGrid>
 
@@ -157,6 +174,15 @@
     identities={dummy.status.identities}
   />
 </main>
+
+{#if openTile}
+  <SensorHistoryModal
+    entity={openTile.entity}
+    label={openTile.label}
+    unit={openTile.unit}
+    onClose={() => (openTile = null)}
+  />
+{/if}
 
 <style>
   .dash {

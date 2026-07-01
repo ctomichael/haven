@@ -23,6 +23,7 @@
   --hairline-2: #e2e2e2;
   --disabled: #c8c2b8;
   --muted-mono: #8c8275;
+  --scrim: rgba(0, 0, 0, 0.28); /* modal backdrop — reads as a light dim on e-ink */
 
   /* Accent solids — for dots, checked fills, identity, density, chart marks */
   --accent-sage: #7e9168;

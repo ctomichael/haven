@@ -101,7 +101,92 @@ async function getStates(): Promise<Map<string, HaRawState>> {
   return inflight;
 }
 
+// --- History (for the temperature-history modal) ---------------------------
+
+export type HaHistoryPoint = { t: string; v: number };
+
+type HistoryResult = {
+  entity_id: string;
+  unit: string | null;
+  points: HaHistoryPoint[];
+  min: number | null;
+  max: number | null;
+};
+
+const HISTORY_TTL_MS = 60_000;
+const historyCache = new Map<string, { at: number; result: HistoryResult }>();
+
+async function fetchHistory(entityId: string, hours: number): Promise<HistoryResult> {
+  const start = new Date(Date.now() - hours * 60 * 60 * 1000);
+  const url =
+    `${HA_URL}/api/history/period/${start.toISOString()}` +
+    // minimal_response keeps the first + last samples full (so we get the unit
+    // from attributes) and trims the rest to {state, last_changed}.
+    `?filter_entity_id=${encodeURIComponent(entityId)}&minimal_response`;
+
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), FETCH_TIMEOUT_MS);
+  let series: Array<{ state?: string; last_changed?: string; last_updated?: string; attributes?: Record<string, unknown> }>;
+  try {
+    const res = await fetch(url, {
+      headers: { authorization: `Bearer ${HA_TOKEN}`, accept: 'application/json' },
+      signal: ctrl.signal,
+    });
+    if (!res.ok) throw new Error(`HA history → HTTP ${res.status}`);
+    const body = (await res.json()) as unknown[][];
+    series = (body[0] ?? []) as typeof series;
+  } finally {
+    clearTimeout(timer);
+  }
+
+  const points: HaHistoryPoint[] = [];
+  for (const s of series) {
+    const v = Number(s.state);
+    const t = s.last_changed ?? s.last_updated;
+    if (Number.isFinite(v) && t) points.push({ t, v });
+  }
+  // The unit lives on the first (full) sample's attributes when present.
+  const first = series[0];
+  const unit = (first?.attributes?.unit_of_measurement as string) ?? null;
+  const values = points.map((p) => p.v);
+  return {
+    entity_id: entityId,
+    unit,
+    points,
+    min: values.length ? Math.min(...values) : null,
+    max: values.length ? Math.max(...values) : null,
+  };
+}
+
 const ha = new Hono();
+
+// GET /api/ha/history?entity=sensor.x&hours=24
+ha.get('/history', async (c) => {
+  if (!HA_URL || !HA_TOKEN) return c.json({ error: 'ha_not_configured' }, 503);
+  const entity = c.req.query('entity') ?? '';
+  if (!entity) return c.json({ error: 'no_entity' }, 400);
+  if (!ALLOWED_DOMAINS.has(domainOf(entity))) return c.json({ error: 'forbidden_domain' }, 403);
+
+  const hours = Math.min(Math.max(Number(c.req.query('hours')) || 24, 1), 168);
+  const key = `${entity}:${hours}`;
+  const cached = historyCache.get(key);
+  if (cached && Date.now() - cached.at < HISTORY_TTL_MS) {
+    c.header('cache-control', 'public, max-age=60');
+    return c.json(cached.result);
+  }
+  try {
+    const result = await fetchHistory(entity, hours);
+    historyCache.set(key, { at: Date.now(), result });
+    c.header('cache-control', 'public, max-age=60');
+    return c.json(result);
+  } catch (e) {
+    if (cached) return c.json(cached.result);
+    return c.json(
+      { error: 'ha_unavailable', detail: e instanceof Error ? e.message : String(e) },
+      502,
+    );
+  }
+});
 
 // GET /api/ha/entities?ids=sensor.a,sensor.b
 ha.get('/entities', async (c) => {

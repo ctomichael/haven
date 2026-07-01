@@ -47,6 +47,26 @@ export async function fetchHaEntities(
   return data.entities;
 }
 
+export type HaHistoryPoint = { t: string; v: number };
+export type HaHistory = {
+  entity_id: string;
+  unit: string | null;
+  points: HaHistoryPoint[];
+  min: number | null;
+  max: number | null;
+};
+
+export async function fetchHaHistory(
+  entity: string,
+  hours = 24,
+  fetchFn: typeof fetch = fetch,
+): Promise<HaHistory> {
+  const q = new URLSearchParams({ entity, hours: String(hours) });
+  const res = await fetchFn(`/api/ha/history?${q.toString()}`);
+  if (!res.ok) throw new Error(`fetchHaHistory failed: HTTP ${res.status}`);
+  return (await res.json()) as HaHistory;
+}
+
 // ----- Weather ---------------------------------------------------------
 
 export type ApiForecastDay = {

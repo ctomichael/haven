@@ -9,14 +9,7 @@ import {
 } from '$lib/api';
 import type { Sensor, CalendarEvent } from '$lib/dummy';
 import { startOfDay, addDays, toWidgetEvent, markNext } from '$lib/calendar';
-
-// Which HA entities feed the three dashboard temperature tiles. This will move
-// into a widget manifest once the widget system lands; for now it lives here.
-const SENSOR_TILES = [
-  { label: 'Living room', entity: 'sensor.living_room_climate_temperature' },
-  { label: 'Bedroom', entity: 'sensor.master_bedroom_climate_temperature' },
-  { label: "Nico's room", entity: 'sensor.nico_climate_temperature' },
-] as const;
+import { SENSOR_TILES } from '$lib/sensors';
 
 function toSensor(label: string, e: HaEntity | undefined): Sensor {
   const n = e ? Number(e.state) : NaN;
