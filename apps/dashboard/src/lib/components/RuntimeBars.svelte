@@ -17,7 +17,17 @@
     meta?: string;
   } = $props();
 
-  let max = $derived(Math.max(...data, 0.001));
+  // Baseline heights off the weekly average rather than zero, so a run of
+  // similar-but-not-equal values reads as a varied bar chart instead of a
+  // flat band near the top. Mean → mid-height; the day furthest from the
+  // mean hits the extreme.
+  let mean = $derived(data.length ? data.reduce((a, b) => a + b, 0) / data.length : 0);
+  let maxDev = $derived(Math.max(...data.map((v) => Math.abs(v - mean)), 0.001));
+
+  function heightPct(v: number): number {
+    const pct = 50 + ((v - mean) / maxDev) * 46;
+    return Math.min(100, Math.max(8, pct));
+  }
 </script>
 
 <WidgetFrame {title} {meta}>
@@ -29,7 +39,7 @@
           <div
             class="bar"
             class:today={i === highlightIndex}
-            style="--h: {Math.max(4, (v / max) * 100)}%"
+            style="--h: {heightPct(v)}%"
           ></div>
         </div>
         <span class="day">{labels[i]}</span>
