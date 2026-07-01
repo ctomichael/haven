@@ -109,7 +109,8 @@
 <style>
   .dash {
     width: 100vw;
-    min-height: 100vh;
+    height: 100vh;
+    overflow: hidden;
     background: var(--paper);
     padding: 36px;
     display: flex;

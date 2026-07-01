@@ -54,7 +54,7 @@
     /* Guarantee vertical room even when the frame is content-height, so the
        bars can actually show their relative heights. Grows to fill taller
        cells too. */
-    min-height: 180px;
+    min-height: 130px;
     display: grid;
     grid-template-columns: repeat(var(--cols, 7), 1fr);
     gap: 8px;

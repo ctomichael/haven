@@ -3,7 +3,7 @@
   import { Minus, Plus, ChevronLeft, ChevronRight, Flame } from 'lucide-svelte';
   import WidgetFrame from './WidgetFrame.svelte';
   import Switch from './Switch.svelte';
-  import TempChart from './TempChart.svelte';
+  import Sparkline from './Sparkline.svelte';
   import type { ClimateState, ClimateCommand, HaHistoryPoint } from '$lib/api';
 
   let {
@@ -49,6 +49,7 @@
     onCommand({ command: climate.on ? 'turn_off' : 'turn_on' });
   }
 
+  let sparkData = $derived(history.map((p) => p.v));
   let fanLabel = $derived((climate.fan_mode ?? '—').replace(/_/g, ' ').toUpperCase());
   let heating = $derived(climate.hvac_action === 'heating');
 
@@ -110,9 +111,10 @@
     </div>
   </div>
 
-  {#if history.length >= 2}
+  {#if sparkData.length >= 2}
     <div class="chart">
-      <TempChart points={history} />
+      <span class="chart-label">Room · last 24h</span>
+      <div class="spark"><Sparkline data={sparkData} fill /></div>
     </div>
   {/if}
 </WidgetFrame>
@@ -230,5 +232,20 @@
   }
   .chart {
     margin-top: 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .chart-label {
+    font-family: var(--font-mono);
+    font-weight: 600;
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--muted-mono);
+  }
+  .spark {
+    height: 120px;
+    color: var(--ink);
   }
 </style>
