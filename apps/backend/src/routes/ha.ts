@@ -117,12 +117,17 @@ const HISTORY_TTL_MS = 60_000;
 const historyCache = new Map<string, { at: number; result: HistoryResult }>();
 
 async function fetchHistory(entityId: string, hours: number): Promise<HistoryResult> {
-  const start = new Date(Date.now() - hours * 60 * 60 * 1000);
+  const now = new Date();
+  const start = new Date(now.getTime() - hours * 60 * 60 * 1000);
   const url =
     `${HA_URL}/api/history/period/${start.toISOString()}` +
+    `?filter_entity_id=${encodeURIComponent(entityId)}` +
+    // end_time is REQUIRED — without it HA returns only ~one day from `start`,
+    // not start→now, so longer ranges silently miss all recent data.
+    `&end_time=${encodeURIComponent(now.toISOString())}` +
     // minimal_response keeps the first + last samples full (so we get the unit
     // from attributes) and trims the rest to {state, last_changed}.
-    `?filter_entity_id=${encodeURIComponent(entityId)}&minimal_response`;
+    `&minimal_response`;
 
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), FETCH_TIMEOUT_MS);
