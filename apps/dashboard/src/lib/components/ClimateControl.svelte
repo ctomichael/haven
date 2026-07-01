@@ -154,7 +154,7 @@
   .power-label {
     font-family: var(--font-mono);
     font-weight: 600;
-    font-size: 13px;
+    font-size: 15px;
     letter-spacing: 0.2em;
     color: var(--muted-mono);
   }
@@ -164,7 +164,7 @@
     gap: 8px;
     font-family: var(--font-mono);
     font-weight: 600;
-    font-size: 13px;
+    font-size: 15px;
     letter-spacing: 0.18em;
     color: var(--muted-mono);
     text-transform: uppercase;
@@ -185,14 +185,14 @@
   .ctl-label {
     font-family: var(--font-mono);
     font-weight: 600;
-    font-size: 12px;
+    font-size: 15px;
     letter-spacing: 0.2em;
     text-transform: uppercase;
     color: var(--muted-mono);
   }
   .stepper {
     display: grid;
-    grid-template-columns: 52px 1fr 52px;
+    grid-template-columns: 60px 1fr 60px;
     align-items: stretch;
     border: var(--border-normal) solid var(--ink);
   }
@@ -200,7 +200,7 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    height: 52px;
+    height: 60px;
     border: 0;
     background: var(--paper);
     color: var(--ink);
@@ -227,7 +227,7 @@
     color: var(--ink);
   }
   .reading.fan {
-    font-size: 15px;
+    font-size: 17px;
     letter-spacing: 0.08em;
   }
   .chart {
@@ -239,13 +239,13 @@
   .chart-label {
     font-family: var(--font-mono);
     font-weight: 600;
-    font-size: 11px;
+    font-size: 14px;
     letter-spacing: 0.2em;
     text-transform: uppercase;
     color: var(--muted-mono);
   }
   .spark {
-    height: 120px;
+    height: 92px;
     color: var(--ink);
   }
 </style>

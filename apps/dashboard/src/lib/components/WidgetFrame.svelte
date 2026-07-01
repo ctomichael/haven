@@ -95,7 +95,7 @@
     gap: 9px;
     font-family: var(--font-sans);
     font-weight: 700;
-    font-size: 14px;
+    font-size: 16px;
     letter-spacing: 0.16em;
     text-transform: uppercase;
     color: var(--ink);
@@ -109,7 +109,7 @@
   .meta {
     font-family: var(--font-mono);
     font-weight: 500;
-    font-size: 13px;
+    font-size: 15px;
     letter-spacing: 0.18em;
     color: var(--ink);
     text-transform: uppercase;
@@ -120,7 +120,7 @@
     gap: 7px;
     font-family: var(--font-mono);
     font-weight: 500;
-    font-size: 11px;
+    font-size: 14px;
     letter-spacing: 0.2em;
     color: var(--ink);
   }

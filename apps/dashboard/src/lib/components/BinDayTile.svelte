@@ -67,7 +67,7 @@
     padding-top: 16px;
     font-family: var(--font-mono);
     font-weight: 600;
-    font-size: 11px;
+    font-size: 14px;
     letter-spacing: 0.2em;
     color: var(--muted-mono);
     text-transform: uppercase;

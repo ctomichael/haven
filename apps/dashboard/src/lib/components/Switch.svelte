@@ -28,8 +28,8 @@
 
 <style>
   .switch {
-    width: 62px;
-    height: 34px;
+    width: 76px;
+    height: 42px;
     border: var(--border-normal) solid var(--ink);
     background: var(--paper);
     border-radius: 999px;
@@ -46,16 +46,16 @@
   }
   .knob {
     position: absolute;
-    top: 4px;
-    left: 4px;
-    width: 22px;
-    height: 22px;
+    top: 7px;
+    left: 7px;
+    width: 28px;
+    height: 28px;
     background: var(--ink);
     border-radius: 50%;
     transition: left 200ms ease, background 200ms ease;
   }
   .switch[aria-pressed='true'] .knob {
     background: var(--paper);
-    left: 32px;
+    left: 41px;
   }
 </style>

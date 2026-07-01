@@ -234,7 +234,7 @@
   .subtitle {
     font-family: var(--font-mono);
     font-weight: 600;
-    font-size: 12px;
+    font-size: 15px;
     letter-spacing: 0.26em;
     color: var(--ink-2);
     text-transform: uppercase;
@@ -247,7 +247,7 @@
   .meta {
     font-family: var(--font-mono);
     font-weight: 600;
-    font-size: 13px;
+    font-size: 15px;
     letter-spacing: 0.18em;
     color: var(--ink);
   }
@@ -255,8 +255,8 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 48px;
-    height: 48px;
+    width: 56px;
+    height: 56px;
     border: var(--border-normal) solid var(--ink);
     background: var(--paper);
     color: var(--ink);

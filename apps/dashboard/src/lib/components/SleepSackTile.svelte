@@ -32,7 +32,7 @@
   .unit {
     font-family: var(--font-sans);
     font-weight: 700;
-    font-size: 16px;
+    font-size: 18px;
     letter-spacing: 0.22em;
     color: var(--ink);
   }
@@ -48,7 +48,7 @@
     padding-top: 16px;
     font-family: var(--font-mono);
     font-weight: 600;
-    font-size: 11px;
+    font-size: 14px;
     letter-spacing: 0.2em;
     color: var(--muted-mono);
     text-transform: uppercase;

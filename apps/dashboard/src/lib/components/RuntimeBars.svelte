@@ -71,7 +71,7 @@
   .val {
     font-family: var(--font-mono);
     font-weight: 600;
-    font-size: 12px;
+    font-size: 15px;
     color: var(--ink);
     font-variant-numeric: tabular-nums;
   }
@@ -96,7 +96,7 @@
   .day {
     font-family: var(--font-mono);
     font-weight: 600;
-    font-size: 12px;
+    font-size: 15px;
     color: var(--ink);
     letter-spacing: 0.1em;
   }

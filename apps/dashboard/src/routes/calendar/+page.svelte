@@ -143,7 +143,7 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 44px;
+    width: 52px;
     border: var(--border-normal) solid var(--hairline);
     background: var(--paper);
     color: var(--ink);
@@ -179,7 +179,7 @@
   .dow {
     font-family: var(--font-mono);
     font-weight: 600;
-    font-size: 12px;
+    font-size: 15px;
     letter-spacing: 0.2em;
   }
   .num {
@@ -229,14 +229,14 @@
     color: var(--ink-2);
     font-family: var(--font-mono);
     font-weight: 600;
-    font-size: 12px;
+    font-size: 15px;
     letter-spacing: 0.16em;
     text-transform: uppercase;
   }
   .empty {
     font-family: var(--font-mono);
     font-weight: 600;
-    font-size: 13px;
+    font-size: 15px;
     letter-spacing: 0.18em;
     color: var(--muted-mono);
     text-transform: uppercase;
@@ -279,7 +279,7 @@
     font-variant-numeric: tabular-nums;
   }
   .time.allday {
-    font-size: 13px;
+    font-size: 15px;
     letter-spacing: 0.12em;
     text-transform: uppercase;
     color: var(--muted-mono);
@@ -296,7 +296,7 @@
   .sub {
     font-family: var(--font-mono);
     font-weight: 500;
-    font-size: 12px;
+    font-size: 15px;
     letter-spacing: 0.18em;
     color: var(--muted-mono);
     text-transform: uppercase;

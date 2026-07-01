@@ -50,7 +50,7 @@
   .sub {
     font-family: var(--font-mono);
     font-weight: 600;
-    font-size: 12px;
+    font-size: 15px;
     letter-spacing: 0.18em;
     text-transform: uppercase;
     color: var(--muted-mono);

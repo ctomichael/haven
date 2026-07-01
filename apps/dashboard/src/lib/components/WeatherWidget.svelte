@@ -125,7 +125,7 @@
   .dow {
     font-family: var(--font-mono);
     font-weight: 600;
-    font-size: 13px;
+    font-size: 15px;
     letter-spacing: 0.2em;
     color: var(--ink);
   }
@@ -142,7 +142,7 @@
   .cond {
     font-family: var(--font-sans);
     font-weight: 500;
-    font-size: 15px;
+    font-size: 17px;
     color: var(--ink-2);
   }
 </style>

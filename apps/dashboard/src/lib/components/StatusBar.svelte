@@ -55,7 +55,7 @@
   .meta {
     font-family: var(--font-mono);
     font-weight: 600;
-    font-size: 12px;
+    font-size: 15px;
     letter-spacing: 0.18em;
     color: var(--ink);
   }
@@ -75,7 +75,7 @@
     justify-content: center;
     font-family: var(--font-mono);
     font-weight: 500;
-    font-size: 13px;
+    font-size: 15px;
     letter-spacing: 0.04em;
   }
 </style>

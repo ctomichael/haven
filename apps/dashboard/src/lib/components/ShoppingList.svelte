@@ -77,7 +77,7 @@
     display: block;
     font-family: var(--font-mono);
     font-weight: 600;
-    font-size: 12px;
+    font-size: 15px;
     letter-spacing: 0.18em;
     color: var(--muted-mono);
     text-transform: uppercase;

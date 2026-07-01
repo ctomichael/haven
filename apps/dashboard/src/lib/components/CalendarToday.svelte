@@ -105,7 +105,7 @@
   .sub {
     font-family: var(--font-mono);
     font-weight: 500;
-    font-size: 12px;
+    font-size: 15px;
     letter-spacing: 0.18em;
     color: var(--muted-mono);
     text-transform: uppercase;
@@ -115,7 +115,7 @@
     color: var(--ink);
     font-family: var(--font-mono);
     font-weight: 600;
-    font-size: 11px;
+    font-size: 14px;
     letter-spacing: 0.18em;
     padding: 4px 8px;
   }

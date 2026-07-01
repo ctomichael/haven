@@ -66,7 +66,7 @@
   .name {
     font-family: var(--font-mono);
     font-weight: 600;
-    font-size: 12px;
+    font-size: 15px;
     letter-spacing: 0.14em;
     text-transform: uppercase;
     color: var(--muted-mono);
@@ -86,7 +86,7 @@
   .unit {
     font-family: var(--font-serif);
     font-weight: 500;
-    font-size: 16px;
+    font-size: 18px;
   }
   .nodata {
     color: var(--muted-mono);

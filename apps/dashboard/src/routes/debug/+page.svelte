@@ -137,7 +137,7 @@
     margin: 4px 0 0;
     color: var(--ink-2);
     font-family: var(--font-mono);
-    font-size: 12px;
+    font-size: 15px;
     letter-spacing: 0.18em;
     text-transform: uppercase;
   }
@@ -153,7 +153,7 @@
   h2 {
     font-family: var(--font-sans);
     font-weight: 600;
-    font-size: 14px;
+    font-size: 16px;
     letter-spacing: 0.16em;
     text-transform: uppercase;
     margin: 0 0 16px;
@@ -168,7 +168,7 @@
   dt {
     color: var(--ink-2);
     font-family: var(--font-mono);
-    font-size: 12px;
+    font-size: 15px;
     letter-spacing: 0.04em;
     text-transform: uppercase;
   }

@@ -395,7 +395,7 @@
     gap: 12px;
     font-family: var(--font-sans);
     font-weight: 700;
-    font-size: 14px;
+    font-size: 16px;
     letter-spacing: 0.16em;
     text-transform: uppercase;
   }
@@ -434,7 +434,7 @@
     color: var(--ink);
     font-family: var(--font-sans);
     font-weight: 700;
-    font-size: 13px;
+    font-size: 15px;
     letter-spacing: 0.18em;
     text-transform: uppercase;
     border: 0;
@@ -456,7 +456,7 @@
     color: var(--ink);
     font-family: var(--font-sans);
     font-weight: 700;
-    font-size: 13px;
+    font-size: 15px;
     letter-spacing: 0.18em;
     text-transform: uppercase;
   }
@@ -523,7 +523,7 @@
   .caption {
     font-family: var(--font-sans);
     font-weight: 700;
-    font-size: 14px;
+    font-size: 16px;
     letter-spacing: 0.16em;
     text-transform: uppercase;
   }
@@ -566,7 +566,7 @@
     color: var(--ink);
     font-family: var(--font-sans);
     font-weight: 700;
-    font-size: 14px;
+    font-size: 16px;
     letter-spacing: 0.16em;
     text-transform: uppercase;
     touch-action: none;
@@ -580,7 +580,7 @@
     margin-left: 12px;
     font-family: var(--font-mono);
     font-weight: 600;
-    font-size: 11px;
+    font-size: 14px;
     letter-spacing: 0.16em;
     color: var(--accent-rust);
     text-transform: uppercase;
@@ -596,7 +596,7 @@
     color: var(--ink);
     font-family: var(--font-sans);
     font-weight: 700;
-    font-size: 14px;
+    font-size: 16px;
     letter-spacing: 0.16em;
     text-transform: uppercase;
   }
@@ -611,7 +611,7 @@
     text-decoration: none;
     font-family: var(--font-sans);
     font-weight: 700;
-    font-size: 14px;
+    font-size: 16px;
     letter-spacing: 0.16em;
     text-transform: uppercase;
   }
@@ -623,7 +623,7 @@
     color: var(--paper);
     font-family: var(--font-sans);
     font-weight: 700;
-    font-size: 14px;
+    font-size: 16px;
     letter-spacing: 0.16em;
     text-transform: uppercase;
   }

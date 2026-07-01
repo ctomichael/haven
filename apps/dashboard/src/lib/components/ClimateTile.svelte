@@ -73,14 +73,14 @@
     color: var(--ink);
     font-family: var(--font-mono);
     font-weight: 600;
-    font-size: 12px;
+    font-size: 15px;
     letter-spacing: 0.16em;
     text-transform: uppercase;
   }
   .mode {
     font-family: var(--font-mono);
     font-weight: 600;
-    font-size: 12px;
+    font-size: 15px;
     letter-spacing: 0.22em;
     color: var(--muted-mono);
     text-transform: uppercase;
@@ -99,7 +99,7 @@
     justify-content: space-between;
     font-family: var(--font-mono);
     font-weight: 500;
-    font-size: 11px;
+    font-size: 14px;
     letter-spacing: 0.2em;
     color: var(--muted-mono);
     text-transform: uppercase;
@@ -107,7 +107,7 @@
   .tap {
     font-family: var(--font-mono);
     font-weight: 600;
-    font-size: 11px;
+    font-size: 14px;
     letter-spacing: 0.22em;
     color: var(--muted-mono);
     text-transform: uppercase;

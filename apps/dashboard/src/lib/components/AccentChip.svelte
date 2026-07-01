@@ -17,7 +17,7 @@
     background: var(--tint);
     color: var(--ink);
     font-family: var(--font-mono);
-    font-size: 12px;
+    font-size: 15px;
     font-weight: 600;
     letter-spacing: 0.12em;
     text-transform: uppercase;
