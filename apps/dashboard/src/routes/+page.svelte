@@ -15,6 +15,8 @@
   import SensorHistoryModal from '$lib/components/SensorHistoryModal.svelte';
   import CaptureButton from '$lib/components/CaptureButton.svelte';
   import StatusBar from '$lib/components/StatusBar.svelte';
+  import NavMenu from '$lib/components/NavMenu.svelte';
+  import { LayoutGrid } from 'lucide-svelte';
   import { SENSOR_TILES } from '$lib/sensors';
 
   import { dummy } from '$lib/dummy';
@@ -42,6 +44,9 @@
 
   // Temperature-history modal — set to the tapped tile's entity + label.
   let openTile = $state<{ entity: string; label: string; unit: string } | null>(null);
+
+  // Top-right navigation menu.
+  let menuOpen = $state(false);
 
   // Local live state — initialised from the load() data, mutated optimistically
   // on toggle. SvelteKit re-runs load() on navigation, so we re-sync there too.
@@ -114,7 +119,12 @@
       <span class="title">{dummy.masthead.title}</span>
       <span class="subtitle">{dummy.masthead.subtitle}</span>
     </div>
-    <span class="meta">{mastheadMeta}</span>
+    <div class="masthead-right">
+      <span class="meta">{mastheadMeta}</span>
+      <button class="menu-btn" onclick={() => (menuOpen = true)} aria-label="Open menu">
+        <LayoutGrid size={24} strokeWidth={2} />
+      </button>
+    </div>
   </header>
 
   <DashboardGrid columns={12} rows="200px 1fr 128px">
@@ -184,6 +194,10 @@
   />
 {/if}
 
+{#if menuOpen}
+  <NavMenu onClose={() => (menuOpen = false)} />
+{/if}
+
 <style>
   .dash {
     width: 100vw;
@@ -225,11 +239,27 @@
     color: var(--ink-2);
     text-transform: uppercase;
   }
+  .masthead-right {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+  }
   .meta {
     font-family: var(--font-mono);
     font-weight: 600;
     font-size: 13px;
     letter-spacing: 0.18em;
     color: var(--ink);
+  }
+  .menu-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    border: var(--border-normal) solid var(--ink);
+    background: var(--paper);
+    color: var(--ink);
+    cursor: pointer;
   }
 </style>
