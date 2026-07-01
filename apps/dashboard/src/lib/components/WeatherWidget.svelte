@@ -85,9 +85,10 @@
   }
   .day {
     flex: 1;
-    padding: 0 0 0 22px;
+    padding: 0 12px 0 22px;
     display: flex;
     align-items: center;
+    justify-content: space-between;
     gap: 14px;
     border-left: var(--border-normal) solid var(--hairline-2);
   }

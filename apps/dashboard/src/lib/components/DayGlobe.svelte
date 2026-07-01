@@ -1,9 +1,9 @@
 <script lang="ts">
-  import { Globe } from 'lucide-svelte';
+  import { Mountain } from 'lucide-svelte';
   import { weatherIcon } from '$lib/weatherIcons';
 
   // Morning (left), afternoon (top) and evening (right) conditions arranged in
-  // a semicircle around a small globe.
+  // a semicircle around a small mountain (we live in the mountains).
   let {
     morning,
     afternoon,
@@ -20,20 +20,21 @@
 </script>
 
 <div class="cluster" aria-hidden="true">
-  {#if A}{@const Ai = A}<span class="pos top"><Ai size={20} strokeWidth={2} /></span>{/if}
-  {#if M}{@const Mi = M}<span class="pos left"><Mi size={20} strokeWidth={2} /></span>{/if}
-  {#if E}{@const Ei = E}<span class="pos right"><Ei size={20} strokeWidth={2} /></span>{/if}
-  <span class="globe"><Globe size={22} strokeWidth={1.75} /></span>
+  {#if A}{@const Ai = A}<span class="pos top"><Ai size={30} strokeWidth={2} /></span>{/if}
+  {#if M}{@const Mi = M}<span class="pos left"><Mi size={30} strokeWidth={2} /></span>{/if}
+  {#if E}{@const Ei = E}<span class="pos right"><Ei size={30} strokeWidth={2} /></span>{/if}
+  <span class="center"><Mountain size={32} strokeWidth={1.75} /></span>
 </div>
 
 <style>
   .cluster {
     position: relative;
-    width: 84px;
-    height: 50px;
+    width: 104px;
+    height: 66px;
     color: var(--ink);
+    flex: 0 0 auto;
   }
-  .globe {
+  .center {
     position: absolute;
     bottom: 0;
     left: 50%;
@@ -51,10 +52,10 @@
   }
   .pos.left {
     left: 0;
-    bottom: 6px;
+    bottom: 8px;
   }
   .pos.right {
     right: 0;
-    bottom: 6px;
+    bottom: 8px;
   }
 </style>
