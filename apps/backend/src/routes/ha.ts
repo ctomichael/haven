@@ -14,6 +14,16 @@ const HA_TOKEN = process.env.HAVEN_HA_TOKEN ?? '';
 const CACHE_TTL_MS = 10_000;
 const FETCH_TIMEOUT_MS = 8_000;
 
+// Entities the control (write) endpoint is allowed to command. The read API is
+// tunnel-exposed, so writes are locked to an explicit allowlist — a leaked URL
+// still can't drive arbitrary devices. Default: the living-room heat pump.
+const CONTROLLABLE = new Set(
+  (process.env.HAVEN_HA_CLIMATE_ENTITIES ?? 'climate.mitsubishi_heatpump')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean),
+);
+
 // Read-only domains the dashboard is allowed to surface. Widen as widgets
 // need more; deliberately excludes presence/camera/media domains.
 const ALLOWED_DOMAINS = new Set([
@@ -231,6 +241,189 @@ ha.get('/entities', async (c) => {
       { error: 'ha_unavailable', detail: e instanceof Error ? e.message : String(e) },
       502,
     );
+  }
+});
+
+// --- Climate: read + guarded control --------------------------------------
+
+export type ClimateState = {
+  entity_id: string;
+  available: boolean;
+  hvac_mode: string; // 'off' | 'heat' | 'cool' | …
+  on: boolean;
+  hvac_action: string | null; // 'heating' | 'idle' | 'off' | …
+  current_temperature: number | null;
+  target_temperature: number | null;
+  fan_mode: string | null;
+  fan_modes: string[];
+  hvac_modes: string[];
+  min_temp: number;
+  max_temp: number;
+  step: number;
+  friendly_name: string | null;
+};
+
+function normalizeClimate(raw: HaRawState): ClimateState {
+  const a = raw.attributes as Record<string, unknown>;
+  const num = (v: unknown): number | null => (Number.isFinite(Number(v)) ? Number(v) : null);
+  return {
+    entity_id: raw.entity_id,
+    available: raw.state !== 'unavailable',
+    hvac_mode: raw.state,
+    on: raw.state !== 'off' && raw.state !== 'unavailable',
+    hvac_action: (a.hvac_action as string) ?? null,
+    current_temperature: num(a.current_temperature),
+    target_temperature: num(a.temperature),
+    fan_mode: (a.fan_mode as string) ?? null,
+    fan_modes: (a.fan_modes as string[]) ?? [],
+    hvac_modes: (a.hvac_modes as string[]) ?? [],
+    min_temp: num(a.min_temp) ?? 16,
+    max_temp: num(a.max_temp) ?? 30,
+    step: num(a.target_temp_step) ?? 1,
+    friendly_name: (a.friendly_name as string) ?? null,
+  };
+}
+
+async function callService(
+  domain: string,
+  service: string,
+  data: Record<string, unknown>,
+): Promise<void> {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), FETCH_TIMEOUT_MS);
+  try {
+    const res = await fetch(`${HA_URL}/api/services/${domain}/${service}`, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${HA_TOKEN}`, 'content-type': 'application/json' },
+      body: JSON.stringify(data),
+      signal: ctrl.signal,
+    });
+    if (!res.ok) throw new Error(`HA ${domain}.${service} → HTTP ${res.status}`);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+// GET /api/ha/climate?entity=climate.x
+ha.get('/climate', async (c) => {
+  if (!HA_URL || !HA_TOKEN) return c.json({ error: 'ha_not_configured' }, 503);
+  const entity = c.req.query('entity') ?? '';
+  if (domainOf(entity) !== 'climate') return c.json({ error: 'bad_entity' }, 400);
+  try {
+    const byId = await getStates();
+    const raw = byId.get(entity);
+    if (!raw) return c.json({ error: 'not_found' }, 404);
+    return c.json(normalizeClimate(raw));
+  } catch (e) {
+    const raw = cache?.byId.get(entity);
+    if (raw) return c.json(normalizeClimate(raw));
+    return c.json({ error: 'ha_unavailable', detail: e instanceof Error ? e.message : String(e) }, 502);
+  }
+});
+
+// POST /api/ha/climate  { entity, command, value? }
+ha.post('/climate', async (c) => {
+  if (!HA_URL || !HA_TOKEN) return c.json({ error: 'ha_not_configured' }, 503);
+  const body = (await c.req.json().catch(() => null)) as
+    | { entity?: string; command?: string; value?: unknown }
+    | null;
+  const entity = body?.entity ?? '';
+  if (!CONTROLLABLE.has(entity)) return c.json({ error: 'forbidden_entity' }, 403);
+
+  let service: string;
+  let data: Record<string, unknown>;
+  switch (body?.command) {
+    case 'turn_on':
+      service = 'turn_on';
+      data = { entity_id: entity };
+      break;
+    case 'turn_off':
+      service = 'turn_off';
+      data = { entity_id: entity };
+      break;
+    case 'set_temperature':
+      if (typeof body.value !== 'number') return c.json({ error: 'bad_value' }, 400);
+      service = 'set_temperature';
+      data = { entity_id: entity, temperature: body.value };
+      break;
+    case 'set_fan_mode':
+      if (typeof body.value !== 'string') return c.json({ error: 'bad_value' }, 400);
+      service = 'set_fan_mode';
+      data = { entity_id: entity, fan_mode: body.value };
+      break;
+    case 'set_hvac_mode':
+      if (typeof body.value !== 'string') return c.json({ error: 'bad_value' }, 400);
+      service = 'set_hvac_mode';
+      data = { entity_id: entity, hvac_mode: body.value };
+      break;
+    default:
+      return c.json({ error: 'bad_command' }, 400);
+  }
+
+  try {
+    await callService('climate', service, data);
+    cache = null; // bust the states snapshot so the read reflects the change
+    const byId = await getStates();
+    const raw = byId.get(entity);
+    return c.json(raw ? normalizeClimate(raw) : { ok: true });
+  } catch (e) {
+    return c.json(
+      { error: 'ha_command_failed', detail: e instanceof Error ? e.message : String(e) },
+      502,
+    );
+  }
+});
+
+// --- Daily energy (heat-pump "runtime" proxy) ------------------------------
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+// Cumulative value as of ts (last sample at or before ts). Points sorted asc.
+function valueAt(points: HaHistoryPoint[], tsMs: number): number | null {
+  let val: number | null = null;
+  for (const p of points) {
+    if (new Date(p.t).getTime() <= tsMs) val = p.v;
+    else break;
+  }
+  return val;
+}
+
+// GET /api/ha/energy-daily?entity=sensor.x&days=7
+// Derives per-local-day kWh from a monotonic cumulative energy counter.
+ha.get('/energy-daily', async (c) => {
+  if (!HA_URL || !HA_TOKEN) return c.json({ error: 'ha_not_configured' }, 503);
+  const entity = c.req.query('entity') ?? '';
+  if (!entity || !ALLOWED_DOMAINS.has(domainOf(entity))) return c.json({ error: 'bad_entity' }, 400);
+  const days = Math.min(Math.max(Number(c.req.query('days')) || 7, 1), 31);
+
+  try {
+    // Fetch an extra day so the oldest bucket has a start reading.
+    const hist = await fetchHistory(entity, (days + 1) * 24);
+    const pts = hist.points;
+    const now = Date.now();
+    const midnightToday = new Date();
+    midnightToday.setHours(0, 0, 0, 0);
+
+    const out: { day: string; label: string; kwh: number }[] = [];
+    for (let i = days - 1; i >= 0; i--) {
+      const dayStart = new Date(midnightToday.getTime() - i * DAY_MS);
+      const dayEndMs = Math.min(dayStart.getTime() + DAY_MS, now);
+      const vStart = valueAt(pts, dayStart.getTime());
+      const vEnd = valueAt(pts, dayEndMs);
+      const kwh = vStart != null && vEnd != null ? Math.max(0, vEnd - vStart) : 0;
+      const y = dayStart.getFullYear();
+      const m = String(dayStart.getMonth() + 1).padStart(2, '0');
+      const dd = String(dayStart.getDate()).padStart(2, '0');
+      out.push({
+        day: `${y}-${m}-${dd}`, // local calendar date, matching the bucket
+        label: dayStart.toLocaleDateString('en-GB', { weekday: 'narrow' }).toUpperCase(),
+        kwh: Math.round(kwh * 100) / 100,
+      });
+    }
+    c.header('cache-control', 'public, max-age=300');
+    return c.json({ unit: hist.unit ?? 'kWh', days: out });
+  } catch (e) {
+    return c.json({ error: 'ha_unavailable', detail: e instanceof Error ? e.message : String(e) }, 502);
   }
 });
 

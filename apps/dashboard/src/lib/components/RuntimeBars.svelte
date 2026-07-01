@@ -6,17 +6,21 @@
     labels,
     highlightIndex,
     unit = 'h',
+    title = 'Heat pump runtime',
+    meta = 'LAST 7 DAYS',
   }: {
     data: number[];
     labels: string[];
     highlightIndex?: number;
     unit?: string;
+    title?: string;
+    meta?: string;
   } = $props();
 
   let max = $derived(Math.max(...data, 0.001));
 </script>
 
-<WidgetFrame title="Heat pump runtime" meta="LAST 7 DAYS">
+<WidgetFrame {title} {meta}>
   <div class="bars">
     {#each data as v, i (i)}
       <div class="col">

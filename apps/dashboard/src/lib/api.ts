@@ -67,6 +67,66 @@ export async function fetchHaHistory(
   return (await res.json()) as HaHistory;
 }
 
+export type ClimateState = {
+  entity_id: string;
+  available: boolean;
+  hvac_mode: string;
+  on: boolean;
+  hvac_action: string | null;
+  current_temperature: number | null;
+  target_temperature: number | null;
+  fan_mode: string | null;
+  fan_modes: string[];
+  hvac_modes: string[];
+  min_temp: number;
+  max_temp: number;
+  step: number;
+  friendly_name: string | null;
+};
+
+export async function fetchClimate(
+  entity: string,
+  fetchFn: typeof fetch = fetch,
+): Promise<ClimateState> {
+  const q = new URLSearchParams({ entity });
+  const res = await fetchFn(`/api/ha/climate?${q.toString()}`);
+  if (!res.ok) throw new Error(`fetchClimate failed: HTTP ${res.status}`);
+  return (await res.json()) as ClimateState;
+}
+
+export type ClimateCommand =
+  | { command: 'turn_on' }
+  | { command: 'turn_off' }
+  | { command: 'set_temperature'; value: number }
+  | { command: 'set_fan_mode'; value: string }
+  | { command: 'set_hvac_mode'; value: string };
+
+export async function sendClimateCommand(
+  entity: string,
+  cmd: ClimateCommand,
+): Promise<ClimateState> {
+  const res = await fetch('/api/ha/climate', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ entity, ...cmd }),
+  });
+  if (!res.ok) throw new Error(`sendClimateCommand failed: HTTP ${res.status}`);
+  return (await res.json()) as ClimateState;
+}
+
+export type EnergyDay = { day: string; label: string; kwh: number };
+
+export async function fetchEnergyDaily(
+  entity: string,
+  days = 7,
+  fetchFn: typeof fetch = fetch,
+): Promise<{ unit: string; days: EnergyDay[] }> {
+  const q = new URLSearchParams({ entity, days: String(days) });
+  const res = await fetchFn(`/api/ha/energy-daily?${q.toString()}`);
+  if (!res.ok) throw new Error(`fetchEnergyDaily failed: HTTP ${res.status}`);
+  return (await res.json()) as { unit: string; days: EnergyDay[] };
+}
+
 // ----- Weather ---------------------------------------------------------
 
 export type ApiForecastDay = {
