@@ -81,24 +81,24 @@
   .forecast {
     flex: 1;
     display: flex;
-    flex-direction: column;
     padding-left: 28px;
   }
   .day {
     flex: 1;
+    padding: 0 0 0 22px;
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 16px;
-    border-top: var(--border-thin) solid var(--hairline-2);
+    gap: 14px;
+    border-left: var(--border-normal) solid var(--hairline-2);
   }
   .day:first-child {
-    border-top: 0;
+    border-left: 0;
+    padding-left: 0;
   }
   .day-info {
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: 4px;
   }
   .dow {
     font-family: var(--font-mono);
