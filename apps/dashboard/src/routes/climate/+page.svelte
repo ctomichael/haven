@@ -5,7 +5,7 @@
   import Cell from '$lib/components/Cell.svelte';
 
   import ClimateControl from '$lib/components/ClimateControl.svelte';
-  import RoomTempList from '$lib/components/RoomTempList.svelte';
+  import RoomTempTiles from '$lib/components/RoomTempTiles.svelte';
   import RuntimeBars from '$lib/components/RuntimeBars.svelte';
   import SleepSackTile from '$lib/components/SleepSackTile.svelte';
 
@@ -79,7 +79,7 @@
         <div class="offline">Heat pump unavailable</div>
       {/if}
     </Cell>
-    <Cell w={5}><RoomTempList rooms={data.rooms} /></Cell>
+    <Cell w={5}><RoomTempTiles rooms={data.rooms} /></Cell>
 
     <Cell w={7}>
       {#if energyValues.length}
