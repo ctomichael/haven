@@ -8,11 +8,14 @@
     min,
     max,
     height = 60,
+    fill = false,
   }: {
     data: number[];
     min?: number;
     max?: number;
     height?: number;
+    // Stretch to the parent's height instead of a fixed px height.
+    fill?: boolean;
   } = $props();
 
   let lo = $derived(min ?? Math.min(...data));
@@ -33,9 +36,10 @@
 
 <svg
   class="sparkline"
+  class:fill
   viewBox="0 0 100 30"
   preserveAspectRatio="none"
-  style="height: {height}px;"
+  style={fill ? undefined : `height: ${height}px`}
 >
   <polyline
     points={points}
@@ -53,5 +57,8 @@
     display: block;
     width: 100%;
     color: var(--ink);
+  }
+  .sparkline.fill {
+    height: 100%;
   }
 </style>

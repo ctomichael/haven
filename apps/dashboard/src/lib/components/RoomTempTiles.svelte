@@ -16,7 +16,7 @@
     <div class="tile">
       <div class="spark">
         {#if r.history.length >= 2}
-          <Sparkline data={r.history} height={48} />
+          <Sparkline data={r.history} fill />
         {/if}
       </div>
       <div class="foot">
@@ -55,8 +55,6 @@
   .spark {
     flex: 1;
     min-height: 0;
-    display: flex;
-    align-items: stretch;
     color: var(--ink);
   }
   .foot {
