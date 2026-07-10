@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { ACTOR } from '../schemas.ts';
 import { BACKEND_URL } from '../config.ts';
 import { notifyReload } from '../reload.ts';
+import { requireApproval } from '../approvals.ts';
 
 // Calendar tools proxy to the backend (which owns Google auth + the ICS
 // reader) rather than re-implementing either in the MCP process. Reads come
@@ -61,11 +62,19 @@ export const calendarEventCreateSchema = {
   location: z.string().optional(),
   time_zone: z.string().optional().describe("IANA tz; defaults to Pacific/Auckland."),
   source_inbox_id: z.string().uuid().optional(),
+  approval_token: z
+    .string()
+    .optional()
+    .describe('Only needed if the household demoted calendar_event_create to ask.'),
   actor: ACTOR,
 };
 
 export async function calendarEventCreate(args: Record<string, unknown>) {
-  const { actor: _actor, ...body } = args;
+  const { actor: _actor, approval_token, ...body } = args as {
+    actor?: string;
+    approval_token?: string;
+  } & Record<string, unknown>;
+  await requireApproval('calendar_event_create', approval_token);
   const event = await backend('/api/calendar/events', { method: 'POST', body });
   await notifyReload('calendar_event_create');
   return event;
@@ -82,11 +91,20 @@ export const calendarEventUpdateSchema = {
   description: z.string().optional(),
   location: z.string().optional(),
   time_zone: z.string().optional(),
+  approval_token: z
+    .string()
+    .optional()
+    .describe('Only needed if the household demoted calendar_event_update to ask.'),
   actor: ACTOR,
 };
 
 export async function calendarEventUpdate(args: Record<string, unknown>) {
-  const { id, actor: _actor, ...body } = args as { id: string; actor?: string };
+  const { id, actor: _actor, approval_token, ...body } = args as {
+    id: string;
+    actor?: string;
+    approval_token?: string;
+  };
+  await requireApproval('calendar_event_update', approval_token);
   const event = await backend(`/api/calendar/events/${encodeURIComponent(id)}`, {
     method: 'PATCH',
     body,

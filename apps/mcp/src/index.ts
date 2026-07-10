@@ -81,7 +81,19 @@ import {
   todoSetDoneSchema,
   todoUpdate,
   todoUpdateSchema,
+  todoDelete,
+  todoDeleteSchema,
 } from './tools/todos.ts';
+import {
+  approvalIssue,
+  approvalIssueSchema,
+  approvalReject,
+  approvalRejectSchema,
+  autonomyPolicyList,
+  autonomyPolicyListSchema,
+  autonomyPolicySet,
+  autonomyPolicySetSchema,
+} from './tools/approvals.ts';
 
 const server = new McpServer({
   name: SERVER_NAME,
@@ -203,6 +215,12 @@ server.tool(
   withAudit('todo_update', todoUpdate as ToolFn),
 );
 server.tool(
+  'todo_delete',
+  'Delete a todo (destructive, floor kind). Requires an approval_token; prefer todo_set_done for completion.',
+  todoDeleteSchema,
+  withAudit('todo_delete', todoDelete as ToolFn),
+);
+server.tool(
   'note_append',
   'Store a household fact in the second brain (Tier 0). No action attached — e.g. "Fiona likes daffodils". Optionally subject-tag and link source_inbox_id.',
   noteAppendSchema,
@@ -255,6 +273,30 @@ server.tool(
   'Get an agent question (and its answer, once given) by id.',
   questionGetSchema,
   withAudit('question_get', questionGet as ToolFn),
+);
+server.tool(
+  'approval_issue',
+  'Record household approval of a gated action and mint a single-use, 10-min approval token. Call after the household approves (approve/reject question). Bumps the earned-autonomy streak.',
+  approvalIssueSchema,
+  withAudit('approval_issue', approvalIssue as ToolFn),
+);
+server.tool(
+  'approval_reject',
+  'Record that the household rejected a gated action (resets its earned-autonomy streak).',
+  approvalRejectSchema,
+  withAudit('approval_reject', approvalReject as ToolFn),
+);
+server.tool(
+  'autonomy_policy_list',
+  'List autonomy policy per action_kind (mode, streak, counts, floor, graduatable). The review job reads this to propose graduation.',
+  autonomyPolicyListSchema,
+  withAudit('autonomy_policy_list', autonomyPolicyList as ToolFn),
+);
+server.tool(
+  'autonomy_policy_set',
+  'Set an action_kind to auto or ask. Itself gated (needs an approval_token); floor kinds refuse auto.',
+  autonomyPolicySetSchema,
+  withAudit('autonomy_policy_set', autonomyPolicySet as ToolFn),
 );
 server.tool(
   'calendar_list_events',

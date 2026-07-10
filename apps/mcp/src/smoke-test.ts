@@ -178,6 +178,41 @@ await callAndPrint('question_ask', {
   actor: 'smoke-test',
 });
 
+// --- Approvals + autonomy (gated destructive flow) ----------------------
+// Create a throwaway todo, prove delete is denied without a token, then
+// approve → mint token → delete, then prove the token can't be reused.
+const delResult = (await client.callTool({
+  name: 'todo_create',
+  arguments: { title: 'Smoke-test: delete me', tags: ['home'], actor: 'smoke-test' },
+})) as { content: Array<{ type: string; text?: string }> };
+const delC = delResult.content[0];
+const delTodo = delC && delC.type === 'text' ? (JSON.parse(delC.text!) as { id: string }) : null;
+
+if (delTodo) {
+  console.log('\n=== todo_delete WITHOUT token (expect permission_denied) ===');
+  await callAndPrint('todo_delete', { id: delTodo.id, reason: 'smoke', approval_token: '' });
+
+  const issued = (await client.callTool({
+    name: 'approval_issue',
+    arguments: { action_kind: 'todo_delete', summary: 'delete smoke todo', decided_by: 'michael' },
+  })) as { content: Array<{ type: string; text?: string }> };
+  const iC = issued.content[0];
+  const token = iC && iC.type === 'text' ? (JSON.parse(iC.text!) as { token: string }).token : '';
+  console.log('\n=== approval_issue → token minted ===', token.slice(0, 24) + '…');
+
+  await callAndPrint('todo_delete', { id: delTodo.id, reason: 'smoke', approval_token: token });
+  console.log('\n=== reuse same token (expect already used) ===');
+  await callAndPrint('todo_delete', { id: delTodo.id, reason: 'smoke', approval_token: token });
+}
+
+await callAndPrint('autonomy_policy_list', {});
+console.log('\n=== autonomy_policy_set todo_delete→auto (expect floor refusal) ===');
+await callAndPrint('autonomy_policy_set', {
+  action_kind: 'todo_delete',
+  mode: 'auto',
+  approval_token: 'x',
+});
+
 // --- Verify the writes landed -------------------------------------------
 await callAndPrint('inbox_list', { limit: 3 });
 await callAndPrint('event_kinds_list');

@@ -57,6 +57,35 @@ All tools are namespaced `mcp_household_`.
    `household-intake` on it again; if it's blocked on a real ambiguity, ensure
    there's an open `question_ask` for it.
 
+## Earned autonomy (morning run)
+
+Once per day, `autonomy_policy_list` and look for kinds flagged `graduatable`
+(mode `ask`, not a floor kind, ≥5 consecutive approvals, 0 recent rejections).
+For each, propose graduation via `question_ask` — e.g. *"You've approved writing
+HA automations 6 times in a row. Make it automatic? I'll still tell you each
+time."* On **yes**, mint a token for `autonomy_policy_set` (`approval_issue
+action_kind=autonomy_policy_set`) and call `autonomy_policy_set mode=auto`. On
+**no**, `approval_reject action_kind=<that kind>` to reset the streak so you
+don't re-ask tomorrow.
+
+The household can also demote at any time ("ask me before calendar changes
+again") → `autonomy_policy_set mode=ask`. Floor kinds (deletes, automation
+removal) never graduate — don't propose them.
+
+## Approving gated actions (any run, and shared with intake)
+
+When you need a gated action (`todo_delete`, `ha_automation_write`,
+`ha_entity_call_service`, `widget_dispatch`, …) and its policy is `ask`:
+
+1. `question_ask` with `options=['approve','reject']` and a clear summary (and
+   a diff, for code/automation changes). Mirror to Telegram for urgency.
+2. On **approve** → `approval_issue action_kind=<kind> summary=… decided_by=…`
+   → pass the returned `token` to the gated tool's `approval_token`.
+3. On **reject** → `approval_reject action_kind=<kind>` and drop the action.
+
+If the policy is already `auto`, skip the question — just call the tool (no
+token needed) and send a one-line Telegram heads-up after.
+
 ## Morning digest (haven-morning only)
 
 After the normal review, send Michael & Fiona a short Telegram message:

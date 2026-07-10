@@ -100,7 +100,7 @@ refs are opaque typed strings (`todo:<uuid>`, `shopping:<uuid>`, `gcal:<id>`,
 | `todo_create` | `title, due_at?, tags?, visibility?, assignee?, source_inbox_id?` | `todo` | Hermes, dashboard | `write_low` | **live** |
 | `todo_set_done` | `id, done` | `todo` | Hermes, dashboard | `write_low` | **live** |
 | `todo_update` | `id, title?, notes?, due_at?, tags?, visibility?, assignee?` | `todo` | Hermes | `write_low` | **live** |
-| `todo_delete` | `id, reason, approval_token` | `{ok}` | Hermes | `destructive` | planned (P4) |
+| `todo_delete` | `id, reason, approval_token` | `{ok}` | Hermes | `destructive` (floor) | **live** |
 
 `assignee` is a user handle (`michael`, `fiona`), resolved to `assignee_user_id`
 server-side — the same convention as the `/api/todos` REST route. Each todo is
@@ -395,15 +395,39 @@ Failure handling: if step 6 fails partway, Claude Code's commit (if any) is reve
 
 ---
 
-## 7. Approval tokens
+## 7. Approval tokens & earned autonomy (P4, live)
 
-To keep the contract uniform, approval lives outside the MCP tools but is referenced by them.
+| Tool | Args | Returns | Caller | Risk | Status |
+|---|---|---|---|---|---|
+| `approval_issue` | `action_kind, summary?, requested_via?, decided_by?` | `{token, expires_at, action_kind}` | Hermes | — | **live** |
+| `approval_reject` | `action_kind, summary?, requested_via?, decided_by?` | `{ok}` | Hermes | — | **live** |
+| `autonomy_policy_list` | — | `{policies:[{action_kind, mode, consecutive_approvals, floor, graduatable, …}]}` | Any | `read` | **live** |
+| `autonomy_policy_set` | `action_kind, mode, approval_token` | `{ok, action_kind, mode}` | Hermes | `write_med` | **live** |
 
-- `approval_issue(plan_envelope_hash, user_id)` → `{token, expires_at}` — issued by Hermes after the user approves; signed; valid for 10 minutes; single-use.
-- The server's `widget_dispatch`, `ha_automation_remove`, `widget_remove`, `todo_delete`, `migration_apply_named` accept an `approval_token` arg and reject if missing/expired/used.
-- For `write_med` and `destructive` calls without an approval token, the server returns `permission_denied` with `details.required_approval: true`.
+**Tokens.** `approval_issue` is called by Hermes *after* the household approves
+(via an approve/reject `question_ask`, on the modal or Telegram). It records the
+decision in the `approvals` ledger and mints a **single-use, HMAC-signed,
+10-minute** token (`apps/mcp/src/approvals.ts`). Gated tools (`todo_delete`,
+`shopping_remove`, `calendar_event_delete`, `ha_entity_call_service`,
+`ha_automation_write/remove`, `widget_dispatch`, `widget_remove`,
+`autonomy_policy_set`) take an `approval_token` and call `requireApproval()`:
+they proceed if the kind's policy is `auto`, else redeem the token or return
+`permission_denied` with `details.required_approval: true`. Signing is stateless
+(a freshly-spawned MCP process verifies a token another spawn issued); single-use
+is enforced by `approvals.used_at`. Secret: `HAVEN_APPROVAL_SECRET`.
 
-This makes the contract testable: a misbehaving Hermes that tries to dispatch without an approval cannot, because the server rejects.
+**Earned autonomy.** `autonomy_policy` holds a `mode` (`auto|ask`) per
+`action_kind` plus streak counters. `approval_issue` bumps the streak;
+`approval_reject` resets it. The morning review reads `autonomy_policy_list` and,
+for any `graduatable` kind (mode `ask`, not floor, ≥5 consecutive approvals),
+proposes graduation via `question_ask` — on yes it calls `autonomy_policy_set
+mode=auto` (itself gated). **Floor kinds** (`calendar_event_delete`,
+`todo_delete`, `ha_automation_remove`, `widget_remove`, `autonomy_policy_set`)
+are enforced in code and can never be made `auto`. Auto-executed formerly-gated
+actions still send a Telegram notification — visibility without friction.
+
+This makes the contract testable: a misbehaving Hermes that tries a gated action
+without an approval cannot, because the server rejects.
 
 ---
 

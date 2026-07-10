@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { sql } from '../client.ts';
 import { ACTOR } from '../schemas.ts';
 import { notifyReload } from '../reload.ts';
+import { requireApproval } from '../approvals.ts';
 import { resolveUserId } from './inbox.ts';
 
 // Row shape from the DB; the tool surfaces a derived `done` boolean,
@@ -188,4 +189,31 @@ export async function todoUpdate(args: {
   }
   await notifyReload('todo_update');
   return present(rows[0]!);
+}
+
+// ----- todo_delete -----------------------------------------------------
+// Destructive: gated by the approval-token flow (contract §7). todo_delete is
+// a floor kind — it can never be made automatic, so an approval token is
+// always required. Prefer todo_set_done for completing; delete is for genuine
+// mistakes/duplicates.
+
+export const todoDeleteSchema = {
+  id: z.string().uuid().describe('todo id'),
+  reason: z.string().min(1).describe('Why it is being deleted (audited).'),
+  approval_token: z.string().describe('Approval token for action_kind=todo_delete.'),
+  actor: ACTOR,
+};
+
+export async function todoDelete(args: { id: string; reason: string; approval_token: string }) {
+  await requireApproval('todo_delete', args.approval_token);
+  const rows = await sql<{ id: string }[]>`
+    delete from todos where id = ${args.id} returning id
+  `;
+  if (rows.length === 0) {
+    const err = new Error(`todo ${args.id} not found`);
+    (err as { code?: string }).code = 'not_found';
+    throw err;
+  }
+  await notifyReload('todo_delete');
+  return { ok: true, id: args.id };
 }

@@ -108,6 +108,7 @@ Set on the Beelink in `/etc/haven/.env`. See
 | `HAVEN_TZ` | Default timezone for created events (e.g. `Pacific/Auckland`) |
 | `HAVEN_NOTES_DIR` | Where the nightly notes export writes markdown (default `/var/haven/notes`) |
 | `HAVEN_BACKEND_URL` | Backend base URL the MCP calendar tools proxy to (default `http://localhost:8080`) |
+| `HAVEN_APPROVAL_SECRET` | HMAC secret for single-use approval tokens (gated destructive tools) — **set in prod** |
 
 ## Production (Beelink Ubuntu VM)
 
