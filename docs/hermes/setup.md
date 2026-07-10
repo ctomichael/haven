@@ -52,9 +52,13 @@ passing `inbox_id`. If the webhook is unset (e.g. on the laptop) the backend
 silently no-ops and the sweeper cron is the only intake path — still correct,
 just not instant.
 
-> The same endpoint later receives `{ "type": "question.answered", ... }`
-> when a user answers an agent question on the Haven modal (Phase 3) — route
-> that to resume the pending work using the question's `context`.
+The same endpoint also receives:
+
+- `{ "type": "question.answered", ... }` when a user answers an agent question
+  on the Haven modal — route to resume the pending work using the `context`.
+- `{ "type": "changelog.updated", "from", "to", "entries" }` after each deploy
+  (`infra/autopull.sh`) — route to the **changelog-interpret** skill so Hermes
+  adapts to new/removed tools and behaviour changes.
 
 ## 3. Cron jobs
 

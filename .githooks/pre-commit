@@ -1,0 +1,37 @@
+#!/bin/sh
+# Haven pre-commit — enforce that every commit updates CHANGELOG.md, so Hermes
+# has an interpretable record of what changed (it reads the delta on each pull).
+#
+# Bypass for exceptional or programmatic commits (agent-generated data,
+# mechanical fixups) with:  git commit --no-verify
+#
+# Installed via `make install-hooks` (sets core.hooksPath=.githooks).
+
+set -eu
+
+GIT_DIR="$(git rev-parse --git-dir)"
+
+# Merge commits don't need a manual entry.
+if [ -f "$GIT_DIR/MERGE_HEAD" ]; then
+  exit 0
+fi
+
+# Pass if CHANGELOG.md is among the staged changes.
+if git diff --cached --name-only | grep -qx 'CHANGELOG.md'; then
+  exit 0
+fi
+
+cat >&2 <<'MSG'
+✗ commit blocked: CHANGELOG.md was not updated.
+
+Every commit must add a top entry to CHANGELOG.md — what changed and how Hermes
+should interpret it:
+
+  ## <YYYY-MM-DD> — <short title>
+  **What:** <what changed>
+  **Hermes:** <how Hermes should adapt, or "no action">
+
+Then `git add CHANGELOG.md` and commit again.
+Exceptional/programmatic commits may bypass with `git commit --no-verify`.
+MSG
+exit 1

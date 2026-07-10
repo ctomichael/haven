@@ -64,6 +64,13 @@ unsafe). If you added a backend route, curl it once against the running backend.
 ## 4. Commit & report
 
 - One commit, message `<verb>: <slug> — <task_id>` (e.g. `widget: snow_watch — task_abc`).
+- **Add a top entry to `CHANGELOG.md`** (a `pre-commit` hook blocks the commit
+  otherwise) — what the widget does and how Hermes should treat it:
+  ```
+  ## <YYYY-MM-DD> — widget: <slug>
+  **What:** <one line>
+  **Hermes:** <e.g. "new wall widget; no tool changes" or the tool it added>
+  ```
 - Update docs in the **same commit** if you changed behaviour/commands/tools
   (CLAUDE.md rule).
 - Call `dashboard_reload(reason="widget:<slug> landed", surface="wall")` via

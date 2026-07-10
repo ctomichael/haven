@@ -102,7 +102,11 @@ function gitCommit(file: string, message: string): void {
   try {
     const add = spawnSync('git', ['-C', REPO_DIR, 'add', file], { encoding: 'utf8' });
     if (add.status !== 0) return;
-    spawnSync('git', ['-C', REPO_DIR, 'commit', '-m', message], { encoding: 'utf8' });
+    // --no-verify: this is agent-generated automation data, not a code change
+    // Hermes needs to learn about, so it skips the CHANGELOG pre-commit hook.
+    spawnSync('git', ['-C', REPO_DIR, 'commit', '--no-verify', '-m', message], {
+      encoding: 'utf8',
+    });
   } catch (e) {
     console.error(`[ha] git commit skipped: ${e instanceof Error ? e.message : String(e)}`);
   }

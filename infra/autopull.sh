@@ -37,7 +37,8 @@ if [ -z "${HAVEN_AUTOPULL_REEXECED:-}" ]; then
 
   log "Re-execing with the freshly-pulled script"
   HAVEN_AUTOPULL_REEXECED=1
-  export HAVEN_AUTOPULL_REEXECED
+  HAVEN_AUTOPULL_OLD="$OLD"
+  export HAVEN_AUTOPULL_REEXECED HAVEN_AUTOPULL_OLD
   exec "$0" "$@"
 fi
 
@@ -57,5 +58,14 @@ sudo -u "$HAVEN_USER" -H sh -c "cd '$REPO_DIR' && /usr/local/bin/bun run --filte
 
 log "Restarting services"
 systemctl restart haven-backend haven-dashboard
+
+# Tell Hermes what changed (the new CHANGELOG.md entries for OLD..NEW) so it can
+# adapt. Best-effort — never fail the deploy over it.
+if [ -n "${HAVEN_AUTOPULL_OLD:-}" ]; then
+  log "Notifying Hermes of changelog delta $HAVEN_AUTOPULL_OLD..$NEW"
+  sudo -u "$HAVEN_USER" -H sh -c \
+    "cd '$REPO_DIR' && /usr/local/bin/bun run apps/backend/src/scripts/notify-changelog.ts '$HAVEN_AUTOPULL_OLD' '$NEW'" \
+    || log "changelog notify failed (non-fatal)"
+fi
 
 log "Deployed $NEW"

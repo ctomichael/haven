@@ -34,7 +34,14 @@ export type QuestionAnswered = {
   context?: Record<string, unknown>;
 };
 
-type HermesEvent = InboxPush | QuestionAnswered;
+export type ChangelogUpdated = {
+  type: 'changelog.updated';
+  from: string;
+  to: string;
+  entries: string; // the new CHANGELOG.md entries (added lines of the OLD..NEW delta)
+};
+
+type HermesEvent = InboxPush | QuestionAnswered | ChangelogUpdated;
 
 export function hermesConfigured(): boolean {
   return Boolean(WEBHOOK_URL);

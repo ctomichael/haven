@@ -71,6 +71,15 @@ Write only inside `ha/automations/haven/`. Never modify automations elsewhere in
 
 All UI uses tokens from the design system. No raw colours, no shadows, no animation. The eink rules in [`design/claude-design-brief.md`](design/claude-design-brief.md) §3 are binding for the wall surface; the phone surface may use light animation but follows the same token set.
 
+### Changelog on every commit
+
+Every commit adds a top entry to [`CHANGELOG.md`](CHANGELOG.md) — *what changed*
+and *how Hermes should interpret it* (new/changed/removed tools, behaviour, or
+"no action"). A `pre-commit` hook enforces this; Hermes reads the delta on every
+pull (`infra/autopull.sh` → `changelog.updated` webhook → `changelog-interpret`
+skill). Only agent-generated data or mechanical fixups bypass it, with
+`git commit --no-verify`.
+
 ### Commit and reload
 
 - Commit your changes before exiting. Message format: `<verb>: <slug> — <task_id>` (e.g. `widget: bin_day — task_abc123`).
