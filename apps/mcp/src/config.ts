@@ -21,3 +21,8 @@ export const REPO_DIR = process.env.HAVEN_REPO_DIR ?? process.cwd();
 export const TASKS_DIR = process.env.HAVEN_TASKS_DIR ?? '/tmp/haven-tasks';
 // Model for dispatched claude -p runs (sonnet by default; opus for gnarly plans).
 export const DISPATCH_MODEL = process.env.HAVEN_DISPATCH_MODEL ?? 'sonnet';
+
+// HAOS config dir the Haven-owned automations are synced into (…/automations/
+// haven/<slug>.yaml). Unset on the laptop → files are written to the repo only,
+// sync + reload skipped.
+export const HA_CONFIG_DIR = process.env.HAVEN_HA_CONFIG_DIR ?? '';

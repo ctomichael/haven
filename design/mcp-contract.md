@@ -173,16 +173,26 @@ proxy the backend rather than duplicating Google auth. Created events carry a
 
 ### Home Assistant
 
-| Tool | Args | Returns | Caller | Risk |
-|---|---|---|---|---|
-| `ha_entity_state` | `entity_id` | `{state, attributes, last_changed}` | Any | `read` |
-| `ha_entity_history` | `entity_id, since, until?, limit=1000` | `[{ts, state, attributes}]` | Any | `read` |
-| `ha_entity_search` | `query, domain?` | `[entity]` | Any | `read` |
-| `ha_entity_call_service` | `domain, service, entity_id, data?` | `{ok}` | Hermes, dashboard | `destructive` |
-| `ha_automation_write` | `name, yaml_content` | `{path, sha}` | Claude Code | `write_med` |
-| `ha_automation_remove` | `name, reason` | `{ok}` | Claude Code | `destructive` |
+| Tool | Args | Returns | Caller | Risk | Status |
+|---|---|---|---|---|---|
+| `ha_entity_state` | `entity_id` | `entity` | Any | `read` | **live** |
+| `ha_entity_history` | `entity_id, hours=24` | `{points, min, max, …}` | Any | `read` | **live** |
+| `ha_entity_search` | `query, domain?` | `{entities}` | Any | `read` | **live** |
+| `ha_entity_call_service` | `domain, service, entity_id?, data?, approval_token` | `{ok}` | Hermes | `write_med` | **live** |
+| `ha_automation_write` | `name, yaml_content, approval_token` | `{path, sha, synced, reloaded}` | Hermes | `write_med` | **live** |
+| `ha_automation_remove` | `name, reason, approval_token` | `{ok, synced, reloaded}` | Hermes | `destructive` (floor) | **live** |
 
-`ha_entity_call_service` is marked destructive because it changes physical-world state (turning a heater on, unlocking a door). Hermes should approval-gate on at least the first call from a session for any given entity, then remember the trust within session memory.
+Reads + service calls proxy the backend (`/api/ha/*`), which holds the HA bearer
+token and enforces domain allowlists (reads: `ALLOWED_DOMAINS`; service calls:
+`SERVICE_DOMAINS`, physical-state domains only). `ha_entity_call_service` is
+gated (approval token) because it changes physical-world state.
+`ha_automation_write` writes `ha/automations/haven/<slug>.yaml` (the only
+directory Haven owns — never user-authored automations), commits it, syncs the
+file onto HAOS (`HAVEN_HA_CONFIG_DIR`, `!include_dir_merge_list`-ed), and calls
+`automation.reload`. Re-writing a slug replaces it (that's an "update"); when
+HAOS sync isn't configured the file is still written + committed (`synced:false`).
+`ha_automation_remove` is a destructive floor kind and only removes Haven-owned
+files.
 
 ### Widgets and dispatch
 

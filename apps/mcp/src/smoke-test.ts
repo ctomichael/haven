@@ -230,6 +230,17 @@ await callAndPrint('widget_dispatch', {
   approval_token: '',
 });
 
+// --- HA automation write: prove it's gated ------------------------------
+// (We only exercise the denial here — a real write touches ha/automations/
+// haven/ under HAVEN_REPO_DIR and commits, which would pollute the checkout.
+// The write path is verified separately with HAVEN_REPO_DIR set to a temp dir.)
+console.log('\n=== ha_automation_write WITHOUT token (expect permission_denied) ===');
+await callAndPrint('ha_automation_write', {
+  name: 'heatpump_off_9pm',
+  yaml_content: '- alias: x\n  trigger: []\n  action: []\n',
+  approval_token: '',
+});
+
 await callAndPrint('autonomy_policy_list', {});
 console.log('\n=== autonomy_policy_set todo_delete→auto (expect floor refusal) ===');
 await callAndPrint('autonomy_policy_set', {

@@ -42,6 +42,16 @@ const ALLOWED_DOMAINS = new Set([
   'todo',
 ]);
 
+// Domains the general service-call endpoint (ha_entity_call_service) may drive.
+// Narrower than reads — physical-state changes. `automation` is here for
+// automation.reload after ha_automation_write. Widen deliberately via env.
+const SERVICE_DOMAINS = new Set(
+  (process.env.HAVEN_HA_SERVICE_DOMAINS ?? 'climate,light,switch,fan,cover,automation')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean),
+);
+
 type HaRawState = {
   entity_id: string;
   state: string;
@@ -241,6 +251,57 @@ ha.get('/entities', async (c) => {
       { error: 'ha_unavailable', detail: e instanceof Error ? e.message : String(e) },
       502,
     );
+  }
+});
+
+// GET /api/ha/search?q=heat&domain=climate — entities matching q, allowlisted.
+ha.get('/search', async (c) => {
+  if (!HA_URL || !HA_TOKEN) return c.json({ error: 'ha_not_configured' }, 503);
+  const q = (c.req.query('q') ?? '').toLowerCase();
+  const domain = c.req.query('domain') ?? '';
+  try {
+    const byId = await getStates();
+    const out: HaEntity[] = [];
+    for (const raw of byId.values()) {
+      const d = domainOf(raw.entity_id);
+      if (!ALLOWED_DOMAINS.has(d)) continue;
+      if (domain && d !== domain) continue;
+      const name = String(raw.attributes?.friendly_name ?? '').toLowerCase();
+      if (q && !raw.entity_id.toLowerCase().includes(q) && !name.includes(q)) continue;
+      out.push(trim(raw));
+      if (out.length >= 50) break;
+    }
+    return c.json({ entities: out });
+  } catch (e) {
+    return c.json({ error: 'ha_unavailable', detail: e instanceof Error ? e.message : String(e) }, 502);
+  }
+});
+
+// POST /api/ha/service  { domain, service, entity_id?, data? }
+// General guarded service call for ha_entity_call_service and automation.reload.
+ha.post('/service', async (c) => {
+  if (!HA_URL || !HA_TOKEN) return c.json({ error: 'ha_not_configured' }, 503);
+  const body = (await c.req.json().catch(() => null)) as
+    | { domain?: string; service?: string; entity_id?: string; data?: Record<string, unknown> }
+    | null;
+  const domain = body?.domain ?? '';
+  const service = body?.service ?? '';
+  if (!domain || !service) return c.json({ error: 'bad_request' }, 400);
+  if (!SERVICE_DOMAINS.has(domain)) return c.json({ error: 'forbidden_domain' }, 403);
+  // If the call targets a specific entity, it must be in a readable domain too.
+  if (body?.entity_id && !ALLOWED_DOMAINS.has(domainOf(body.entity_id))) {
+    return c.json({ error: 'forbidden_entity' }, 403);
+  }
+  const data: Record<string, unknown> = {
+    ...(body?.data ?? {}),
+    ...(body?.entity_id ? { entity_id: body.entity_id } : {}),
+  };
+  try {
+    await callService(domain, service, data);
+    cache = null; // reflect any state change on the next read
+    return c.json({ ok: true });
+  } catch (e) {
+    return c.json({ error: 'ha_command_failed', detail: e instanceof Error ? e.message : String(e) }, 502);
   }
 });
 

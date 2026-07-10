@@ -138,3 +138,23 @@ the Beelink (as the `haven` user):
 
 Verify a dispatch with a trivial plan and watch `widget_dispatch_status` +
 `/var/haven/tasks/<id>/run.log`.
+
+## 7. HA automations (one-time HAOS setup)
+
+So `ha_automation_write` can make Haven-owned automations live:
+
+1. Include the Haven automations dir in HA's `configuration.yaml`:
+   ```yaml
+   automation haven: !include_dir_merge_list automations/haven/
+   ```
+2. Make the HAOS config dir writable from the Beelink (Samba/SSH add-on, or a
+   mount) and point Haven at it: `HAVEN_HA_CONFIG_DIR=/path/to/homeassistant/config`
+   in `/etc/haven/.env`. Haven copies files to `<that>/automations/haven/`.
+3. Restart HA once so the include takes effect. After that, writes reload live
+   (`automation.reload`) — no restart.
+4. Optionally widen `HAVEN_HA_SERVICE_DOMAINS` (default
+   `climate,light,switch,fan,cover,automation`) if automations need other domains.
+
+If `HAVEN_HA_CONFIG_DIR` is unset, `ha_automation_write` still writes + commits
+the YAML to the repo (`synced:false`) — it just isn't live until synced. The
+automation-authoring skill tells the household when that's the case.

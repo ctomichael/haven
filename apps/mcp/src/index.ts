@@ -102,6 +102,20 @@ import {
   autonomyPolicySet,
   autonomyPolicySetSchema,
 } from './tools/approvals.ts';
+import {
+  haEntityState,
+  haEntityStateSchema,
+  haEntityHistory,
+  haEntityHistorySchema,
+  haEntitySearch,
+  haEntitySearchSchema,
+  haEntityCallService,
+  haEntityCallServiceSchema,
+  haAutomationWrite,
+  haAutomationWriteSchema,
+  haAutomationRemove,
+  haAutomationRemoveSchema,
+} from './tools/ha.ts';
 
 const server = new McpServer({
   name: SERVER_NAME,
@@ -305,6 +319,42 @@ server.tool(
   'Set an action_kind to auto or ask. Itself gated (needs an approval_token); floor kinds refuse auto.',
   autonomyPolicySetSchema,
   withAudit('autonomy_policy_set', autonomyPolicySet as ToolFn),
+);
+server.tool(
+  'ha_entity_state',
+  'Read a Home Assistant entity state (allowlisted domains, via the backend proxy).',
+  haEntityStateSchema,
+  withAudit('ha_entity_state', haEntityState as ToolFn),
+);
+server.tool(
+  'ha_entity_history',
+  'Read an HA entity history series over the last N hours.',
+  haEntityHistorySchema,
+  withAudit('ha_entity_history', haEntityHistory as ToolFn),
+);
+server.tool(
+  'ha_entity_search',
+  'Find HA entities by substring of id/friendly name, optionally within a domain.',
+  haEntitySearchSchema,
+  withAudit('ha_entity_search', haEntitySearch as ToolFn),
+);
+server.tool(
+  'ha_entity_call_service',
+  'Call an HA service (turn_on, set_temperature, …) on an allowlisted domain. Gated (approval_token) — it changes physical state.',
+  haEntityCallServiceSchema,
+  withAudit('ha_entity_call_service', haEntityCallService as ToolFn),
+);
+server.tool(
+  'ha_automation_write',
+  'Write a Haven-owned automation (ha/automations/haven/<slug>.yaml), sync to HAOS, reload. Gated (approval_token).',
+  haAutomationWriteSchema,
+  withAudit('ha_automation_write', haAutomationWrite as ToolFn),
+);
+server.tool(
+  'ha_automation_remove',
+  'Remove a Haven-owned automation (destructive, floor). Requires an approval_token; only touches ha/automations/haven/.',
+  haAutomationRemoveSchema,
+  withAudit('ha_automation_remove', haAutomationRemove as ToolFn),
 );
 server.tool(
   'calendar_list_events',
