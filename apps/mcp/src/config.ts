@@ -8,3 +8,7 @@
 export const AGENT_ID = process.env.HAVEN_MCP_AGENT_ID ?? 'unknown';
 export const SERVER_NAME = 'household-mcp';
 export const SERVER_VERSION = '0.3.0';
+
+// Some tools proxy to the backend rather than duplicating an integration's
+// auth (Google Calendar, Home Assistant). Same box in prod, so localhost.
+export const BACKEND_URL = process.env.HAVEN_BACKEND_URL ?? 'http://localhost:8080';

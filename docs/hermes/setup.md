@@ -65,7 +65,7 @@ Register via Hermes' cron tool (`hermes` → "create a cron job …", or the TUI
 | `haven-intake-sweeper` | `*/15 * * * *` | agent | "Run the household-intake skill for every raw_inbox item still pending. Use `mcp_household_inbox_list status=pending older_than=10m`." |
 | `haven-review` | `0 */3 * * *` | agent | "Run the household-review skill." *(Phase 3)* |
 | `haven-morning` | `30 7 * * *` | agent | "Run the household-review skill, then send Fiona & Michael the morning digest on Telegram." *(Phase 3)* |
-| `haven-notes-export` | `0 3 * * *` | **script** (`no_agent`) | `notes-export.sh` — dumps notes to `/var/haven/notes/`. *(Phase 2)* |
+| `haven-notes-export` | `0 3 * * *` | **script** (`no_agent`) | `bun run /opt/haven/apps/backend/src/scripts/export-notes.ts` — dumps notes to `/var/haven/notes/`. |
 
 The sweeper is the backstop for the push webhook: anything the webhook missed
 (Hermes was down, backend restarted mid-flight) gets picked up within 15 min.
@@ -93,7 +93,34 @@ Anything intake has to ask about (e.g. what "Nico's food" means) should be
 written back here **and** stored as a Haven note (`note_append`, Phase 2) so
 both the agent and the household data remember it.
 
-## 5. Command allowlist (for dispatch — Phase 5)
+## 5. Google Calendar write-back (one-time)
+
+So `calendar_event_create` can write to the shared family calendar:
+
+1. In Google Cloud Console: create a project, enable the **Google Calendar
+   API**, create an **OAuth 2.0 Client ID** (type: Desktop app).
+2. Run a one-time consent flow (any OAuth helper) requesting scope
+   `https://www.googleapis.com/auth/calendar.events`, signed in as the account
+   that owns the shared family calendar. Capture the **refresh token**.
+3. Find the shared calendar's id (Calendar settings → *Integrate calendar* →
+   Calendar ID, ends `@group.calendar.google.com`).
+4. Put these in `/etc/haven/.env` (never commit):
+
+   ```
+   GOOGLE_OAUTH_CLIENT_ID=...
+   GOOGLE_OAUTH_CLIENT_SECRET=...
+   GOOGLE_OAUTH_REFRESH_TOKEN=...
+   HAVEN_GCAL_CALENDAR_ID=...@group.calendar.google.com
+   HAVEN_TZ=Pacific/Auckland
+   ```
+
+Reads still come from the ICS feed (`HAVEN_CALENDAR_ICS_URL`); point that at
+the **same** shared calendar so created events show on the wall within ~15 min.
+Until these are set, `calendar_event_create` returns `not_configured` and the
+intake skill should fall back to a dated todo. Check with
+`curl localhost:8080/api/calendar/config`.
+
+## 6. Command allowlist (for dispatch — Phase 5)
 
 So `widget_dispatch` can run `claude -p` unattended, add the invocation to
 Hermes' `command_allowlist` in `config.yaml`. Until Phase 5 this isn't needed.

@@ -81,7 +81,7 @@ diagnosis.
 
 HouseholdMCP runs over stdio — clients (Hermes, Claude Code) spawn it as a
 subprocess with `HAVEN_MCP_AGENT_ID` set for audit attribution. To exercise
-the v0.1 read-only tool surface end-to-end:
+the read + write-low tool surface end-to-end:
 
 ```bash
 make db-up
@@ -90,7 +90,24 @@ bun run --filter @haven/mcp smoke
 
 That spawns the server, lists tools, calls each, and confirms audit_log
 rows land in Postgres. See [`design/mcp-contract.md`](design/mcp-contract.md)
-for the full tool catalogue and the plan envelope contract.
+for the full tool catalogue and the plan envelope contract, and
+[`design/agent-maturity-plan.md`](design/agent-maturity-plan.md) for the
+agent-integration build (Hermes intake, review, dispatch).
+
+### Agent-integration env vars
+
+Optional; unset on the laptop degrades gracefully (webhook/calendar no-op).
+Set on the Beelink in `/etc/haven/.env`. See
+[`docs/hermes/setup.md`](docs/hermes/setup.md).
+
+| Var | Purpose |
+|---|---|
+| `HERMES_WEBHOOK_URL` / `HERMES_WEBHOOK_SECRET` | Push new captures to Hermes for instant intake |
+| `GOOGLE_OAUTH_CLIENT_ID` / `_SECRET` / `_REFRESH_TOKEN` | Google Calendar write-back auth (scope `calendar.events`) |
+| `HAVEN_GCAL_CALENDAR_ID` | Shared family calendar events are written to |
+| `HAVEN_TZ` | Default timezone for created events (e.g. `Pacific/Auckland`) |
+| `HAVEN_NOTES_DIR` | Where the nightly notes export writes markdown (default `/var/haven/notes`) |
+| `HAVEN_BACKEND_URL` | Backend base URL the MCP calendar tools proxy to (default `http://localhost:8080`) |
 
 ## Production (Beelink Ubuntu VM)
 

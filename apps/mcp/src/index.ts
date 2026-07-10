@@ -27,6 +27,23 @@ import {
 } from './tools/shopping.ts';
 import { dashboardReload, dashboardReloadSchema } from './tools/dashboard.ts';
 import {
+  noteAppend,
+  noteAppendSchema,
+  noteList,
+  noteListSchema,
+  noteSearch,
+  noteSearchSchema,
+} from './tools/notes.ts';
+import { searchAll, searchAllSchema } from './tools/search.ts';
+import {
+  calendarListEvents,
+  calendarListEventsSchema,
+  calendarEventCreate,
+  calendarEventCreateSchema,
+  calendarEventUpdate,
+  calendarEventUpdateSchema,
+} from './tools/calendar.ts';
+import {
   eventKindRegister,
   eventKindRegisterSchema,
   eventKindsList,
@@ -170,6 +187,48 @@ server.tool(
   'Partially update a todo (title, notes, due_at, tags, visibility, assignee). Only fields present change; pass null to clear a nullable field.',
   todoUpdateSchema,
   withAudit('todo_update', todoUpdate as ToolFn),
+);
+server.tool(
+  'note_append',
+  'Store a household fact in the second brain (Tier 0). No action attached — e.g. "Fiona likes daffodils". Optionally subject-tag and link source_inbox_id.',
+  noteAppendSchema,
+  withAudit('note_append', noteAppend as ToolFn),
+);
+server.tool(
+  'note_list',
+  'List notes, optionally filtered by subject tag. Newest first.',
+  noteListSchema,
+  withAudit('note_list', noteList as ToolFn),
+);
+server.tool(
+  'note_search',
+  'Full-text search the second brain by keyword/phrase.',
+  noteSearchSchema,
+  withAudit('note_search', noteSearch as ToolFn),
+);
+server.tool(
+  'search_all',
+  'Cross-tier recall across notes, todos, and inbox. Returns typed refs (note:*, todo:*, inbox:*). "Have we mentioned X before?"',
+  searchAllSchema,
+  withAudit('search_all', searchAll as ToolFn),
+);
+server.tool(
+  'calendar_list_events',
+  'List calendar events in a window (reads the ICS mirror via the backend).',
+  calendarListEventsSchema,
+  withAudit('calendar_list_events', calendarListEvents as ToolFn),
+);
+server.tool(
+  'calendar_event_create',
+  'Create an event on the shared family Google Calendar. Timed (ISO start) or all-day (YYYY-MM-DD). Link source_inbox_id for provenance.',
+  calendarEventCreateSchema,
+  withAudit('calendar_event_create', calendarEventCreate as ToolFn),
+);
+server.tool(
+  'calendar_event_update',
+  'Update an event on the shared family Google Calendar by id. Only fields present change.',
+  calendarEventUpdateSchema,
+  withAudit('calendar_event_update', calendarEventUpdate as ToolFn),
 );
 server.tool(
   'event_kinds_list',

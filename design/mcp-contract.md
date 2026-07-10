@@ -124,16 +124,23 @@ keeps the row, so history and provenance survive. `shopping_remove` (genuine
 deletion, rarely needed) is `write_med` and gated behind an approval token.
 `aisle` is one of `produce | bakery | dairy | pantry | other`.
 
-### Notes (markdown files in git repo)
+### Notes (Tier 0 second brain)
 
-| Tool | Args | Returns | Caller | Risk |
-|---|---|---|---|---|
-| `note_append` | `path, content, mode='append'\|'replace_section', section?` | `{ok, line_range}` | Hermes | `write_low` |
-| `note_read` | `path` | `{content, frontmatter}` | Any | `read` |
-| `note_list` | `glob?` | `[paths]` | Any | `read` |
-| `note_search` | `query, semantic=true, limit=20` | `[{path, snippet, score}]` | Hermes | `read` |
+| Tool | Args | Returns | Caller | Risk | Status |
+|---|---|---|---|---|---|
+| `note_append` | `body, title?, subject?, tags?, source_inbox_id?` | `note` | Hermes | `write_low` | **live** |
+| `note_list` | `subject?, limit=50` | `{notes}` | Any | `read` | **live** |
+| `note_search` | `query, limit=20` | `{notes}` | Hermes | `read` | **live** |
 
-Notes live at `<repo>/notes/`. Append-mode adds a timestamped bullet under the appropriate section; replace_section overwrites a named section heading. Frontmatter is YAML.
+**Revised from the original "markdown in git" design.** Notes are now a
+Postgres table (`notes`, migration 0005) with SQL full-text search — this keeps
+the second brain searchable via `search_all` and symmetric with the rest of the
+MCP surface. A nightly script-mode cron (`export-notes.ts`) writes them to
+`/var/haven/notes/*.md` (one file per `subject`) so the greppable/backup-
+friendly property survives. `subject` is a grouping tag like `person:fiona`.
+pgvector semantic search is deferred until a local embedding runtime exists on
+the Beelink (the `search` tsvector column covers keyword recall meanwhile; the
+embedding column is a safe additive migration later).
 
 ### Events (generic log table)
 
@@ -146,16 +153,23 @@ Notes live at `<repo>/notes/`. Append-mode adds a timestamped bullet under the a
 
 `event_kinds_list` is the canonical answer to "what data shapes do we have?" — Hermes consults it before logging unfamiliar kinds; Claude Code consults it before proposing a new one. Each kind has an optional schema for `metadata`, validated on write.
 
-### Calendar (read-only mirror of Google)
+### Calendar (read via ICS mirror, write via Google API)
 
-| Tool | Args | Returns | Caller | Risk |
-|---|---|---|---|---|
-| `calendar_today` | `tz?` | `[event]` | Any | `read` |
-| `calendar_upcoming` | `days=7` | `[event]` | Any | `read` |
-| `calendar_search` | `query, since?, until?, limit=50` | `[event]` | Hermes | `read` |
-| `calendar_sync_now` | — | `{events_added, events_updated, events_removed}` | Admin, scheduler | `write_low` |
+| Tool | Args | Returns | Caller | Risk | Status |
+|---|---|---|---|---|---|
+| `calendar_list_events` | `from?, to?` | `{events, from, to}` | Any | `read` | **live** |
+| `calendar_event_create` | `summary, start, end?, all_day?, description?, location?, time_zone?, source_inbox_id?` | `{id, htmlLink, …}` | Hermes | `write_med` (auto by default policy) | **live** |
+| `calendar_event_update` | `id, summary?, start?, end?, …` | `{id, htmlLink, …}` | Hermes | `write_med` (auto by default policy) | **live** |
+| `calendar_event_delete` | `id, approval_token` | `{ok}` | Hermes | `destructive` | planned (P4) |
 
-Calendar mirror updates on a 5-min schedule plus push subscriptions; `calendar_sync_now` forces a refresh.
+**Revised from the original read-only design (see §9).** Reads still come from
+the ICS feed (secret URL stays server-side; recurrences expanded). Writes go to
+the **shared family Google Calendar** via the Calendar API write-back service
+(`apps/backend/src/services/gcal.ts`, OAuth refresh-token, scope
+`calendar.events`) so agent-created appointments alert on phones. The MCP tools
+proxy the backend rather than duplicating Google auth. Created events carry a
+`haven_inbox_id` extended property + a provenance footer for auditability.
+`start` is an ISO datetime with offset (timed) or `YYYY-MM-DD` (all-day).
 
 ### Home Assistant
 
@@ -385,8 +399,15 @@ Current version: `2026.06.22-0.1.0` (first locked draft).
 
 These decisions are folded into the contract; tools above operate under these assumptions. Treat as binding for v1.
 
-### Calendar — read-only mirror only
-`calendar_*` tools are read-only against Google Calendar in v1. OAuth scope is `calendar.readonly`. The mirror table is the single source for dashboard reads. No write-back tools (`calendar_create_event`, etc.) ship in v1 — revisit when a concrete dashboard write-flow appears.
+### Calendar — read via ICS, write via Google API (revised)
+Original v1 decision was read-only. **Superseded in the agent-maturity plan
+(P2):** the concrete write-flow appeared — Hermes creating appointments from
+plain-language captures ("Nico has a doctor's appointment Tuesday 2pm"). Reads
+stay on the server-side ICS mirror; writes go to **one shared family calendar**
+via `calendar_event_create/update` (OAuth scope `calendar.events`). Delete is
+`destructive` and gated behind the P4 approval-token flow. Route agent-created
+events to the shared calendar only — never to a personal calendar without
+explicit per-event intent.
 
 ### Voice memo transcription — Whisper.cpp on Beelink
 Audio captures are transcribed locally by a Whisper.cpp service running on the Beelink Ubuntu VM. The dashboard backend invokes it when an audio attachment hits `inbox_append`; it writes the transcript into the same `raw_inbox` row (`raw_text`) and retains the original audio at `audio_url` for replay and debugging. No household voice data leaves the home. Start with `medium.en` (~1.5 GB); upgrade to `large-v3` if accuracy demands it.

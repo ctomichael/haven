@@ -1,5 +1,10 @@
 import { Hono } from 'hono';
+import { zValidator } from '@hono/zod-validator';
+import { z } from 'zod';
 import ical from 'node-ical';
+
+import { audit } from '../audit.ts';
+import { createEvent, updateEvent, deleteEvent, gcalConfigured } from '../services/gcal.ts';
 
 // Read-only calendar, sourced from an ICS URL (HAVEN_CALENDAR_ICS_URL).
 // The backend fetches + parses the feed (recurrences expanded) and serves
@@ -184,5 +189,87 @@ calendar.get('/events', async (c) => {
     );
   }
 });
+
+// --- Write-back (Google Calendar API) ----------------------------------
+// Reads stay on the ICS feed above; these create/update/delete on the shared
+// family calendar. The MCP calendar_event_* tools call these over localhost
+// rather than duplicating Google auth in the MCP process.
+
+const isoOrDate = z
+  .string()
+  .describe('ISO-8601 datetime with offset, or YYYY-MM-DD for all-day.');
+
+const CreateBody = z.object({
+  summary: z.string().min(1),
+  start: isoOrDate,
+  end: isoOrDate.optional(),
+  all_day: z.boolean().optional(),
+  description: z.string().optional(),
+  location: z.string().optional(),
+  time_zone: z.string().optional(),
+  source_inbox_id: z.string().uuid().optional(),
+});
+
+function errStatus(e: unknown): 503 | 404 | 502 {
+  const code = (e as { code?: string }).code;
+  if (code === 'not_configured') return 503;
+  if (code === 'not_found') return 404;
+  return 502;
+}
+
+calendar.post('/events', zValidator('json', CreateBody), async (c) => {
+  const args = c.req.valid('json');
+  let status: 'ok' | 'error' = 'ok';
+  let detail: unknown = null;
+  try {
+    const event = await createEvent(args);
+    return c.json(event, 201);
+  } catch (e) {
+    status = 'error';
+    detail = { error: (e as { code?: string }).code ?? 'gcal_error', message: String(e) };
+    return c.json(detail, errStatus(e));
+  } finally {
+    void audit({ tool: 'calendar_event_create', args, actor: undefined, resultStatus: status, details: status === 'error' ? detail : null });
+  }
+});
+
+const EventIdParam = z.object({ id: z.string().min(1) });
+const UpdateBody = CreateBody.partial().omit({ source_inbox_id: true });
+
+calendar.patch('/events/:id', zValidator('param', EventIdParam), zValidator('json', UpdateBody), async (c) => {
+  const { id } = c.req.valid('param');
+  const args = c.req.valid('json');
+  let status: 'ok' | 'error' = 'ok';
+  let detail: unknown = null;
+  try {
+    const event = await updateEvent(id, args);
+    return c.json(event);
+  } catch (e) {
+    status = 'error';
+    detail = { error: (e as { code?: string }).code ?? 'gcal_error', message: String(e) };
+    return c.json(detail, errStatus(e));
+  } finally {
+    void audit({ tool: 'calendar_event_update', args: { id, ...args }, actor: undefined, resultStatus: status, details: status === 'error' ? detail : null });
+  }
+});
+
+calendar.delete('/events/:id', zValidator('param', EventIdParam), async (c) => {
+  const { id } = c.req.valid('param');
+  let status: 'ok' | 'error' = 'ok';
+  let detail: unknown = null;
+  try {
+    await deleteEvent(id);
+    return c.json({ ok: true });
+  } catch (e) {
+    status = 'error';
+    detail = { error: (e as { code?: string }).code ?? 'gcal_error', message: String(e) };
+    return c.json(detail, errStatus(e));
+  } finally {
+    void audit({ tool: 'calendar_event_delete', args: { id }, actor: undefined, resultStatus: status, details: status === 'error' ? detail : null });
+  }
+});
+
+// GET /api/calendar/config — is write-back available? (for the dashboard/debug)
+calendar.get('/config', (c) => c.json({ write_enabled: gcalConfigured() }));
 
 export default calendar;

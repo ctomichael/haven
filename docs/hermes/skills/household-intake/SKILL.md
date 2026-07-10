@@ -43,8 +43,8 @@ Every tool below is namespaced `mcp_household_` (e.g.
    |---|---|---|
    | **Shopping** | "buy / need / out of / pick up" a physical good | `shopping_add name=… [qty] [aisle] source_inbox_id=<id>` |
    | **Todo** | a task to do, esp. with a deadline | `todo_create title=… [due_at] [assignee] source_inbox_id=<id>` |
-   | **Calendar event** | a dated/timed event, appointment, meeting | `calendar_event_create …` *(Phase 2 — until then, file as a todo with the date in the title and note that a calendar tool is coming)* |
-   | **Fact / note** | a statement about the world, no action ("Fiona likes daffodils") | `note_append …` *(Phase 2 — until then, hold as pending and surface in review)* |
+   | **Calendar event** | a dated/timed event, appointment, meeting | `calendar_event_create summary=… start=<ISO+offset> source_inbox_id=<id>` (shared family calendar) |
+   | **Fact / note** | a statement about the world, no action ("Fiona likes daffodils") | `note_append body=… [subject=person:fiona] source_inbox_id=<id>` |
    | **Widget request** | "show me … on the wall / every morning" | `widget_propose` → dispatch *(Phase 5)* |
    | **Automation** | "make the heat pump / lights …" | draft + `ha_automation_write` *(Phase 6)* |
    | **Reminder / standing request** | "remind me every Sunday …" | create a Hermes cron; leave a note of what you set up |
@@ -80,9 +80,13 @@ Every tool below is namespaced `mcp_household_` (e.g.
 - **"We need to pick our new house's carpet by the 23rd of July"** →
   `todo_create title="Pick carpet for the new house" due_at=2026-07-23T00:00:00+12:00`
   → `inbox_file refs=[todo:…]` → "Todo added: pick carpet, due 23 Jul."
-- **"Fiona really likes daffodils"** → `note_append` (subject `person:fiona`),
-  no other action → `inbox_file refs=[note:…] status=filed`. *(Until Phase 2:
-  leave pending, tell the review job.)*
+- **"Nico has a doctors appointment on Tuesday at 2pm"** → resolve to the next
+  Tuesday in Pacific/Auckland → `calendar_event_create summary="Nico — doctor"
+  start=2026-07-14T14:00:00+12:00` → `inbox_file refs=[gcal:<id>]` → "Added Nico's
+  doctor appt, Tue 14 Jul 2pm, to the family calendar."
+- **"Fiona really likes daffodils"** → `note_append body="Fiona really likes
+  daffodils" subject="person:fiona"`, no other action → `inbox_file
+  refs=[note:…] status=filed`.
 
 ## Pitfalls
 

@@ -150,6 +150,16 @@ if (appended) {
   });
 }
 
+// --- Notes (second brain): append → search → cross-tier search ----------
+await callAndPrint('note_append', {
+  body: 'Fiona really likes daffodils',
+  subject: 'person:fiona',
+  source_inbox_id: appended?.id,
+  actor: 'smoke-test',
+});
+await callAndPrint('note_search', { query: 'daffodils', limit: 3 });
+await callAndPrint('search_all', { query: 'daffodils', limit: 5 });
+
 // --- Verify the writes landed -------------------------------------------
 await callAndPrint('inbox_list', { limit: 3 });
 await callAndPrint('event_kinds_list');

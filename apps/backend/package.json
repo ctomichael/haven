@@ -10,7 +10,8 @@
     "check": "tsc --noEmit",
     "db:migrate": "bun run src/db/cli.ts migrate",
     "db:status": "bun run src/db/cli.ts status",
-    "db:migrate:unsafe": "bun run src/db/cli.ts migrate-unsafe"
+    "db:migrate:unsafe": "bun run src/db/cli.ts migrate-unsafe",
+    "notes:export": "bun run src/scripts/export-notes.ts"
   },
   "dependencies": {
     "@hono/zod-validator": "^0.4.0",
