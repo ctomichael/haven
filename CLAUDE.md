@@ -43,7 +43,11 @@ ha/
 design/                Design brief, MCP contract, future ADRs
 ```
 
-### Adding a widget (when the widget system lands)
+### Adding a widget
+
+> If you are a **dispatched** session (launched via `claude -p` by
+> `widget_dispatch`), your operational brief is [`docs/agent-dispatch.md`](docs/agent-dispatch.md)
+> plus your `plan.json` — read those first. The below is the standing convention.
 
 A widget is a folder under `apps/dashboard/src/lib/widgets/<slug>/` containing:
 

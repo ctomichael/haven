@@ -186,16 +186,27 @@ proxy the backend rather than duplicating Google auth. Created events carry a
 
 ### Widgets and dispatch
 
-| Tool | Args | Returns | Caller | Risk |
-|---|---|---|---|---|
-| `widget_list` | `visibility?, surface?` | `[{name, visibility, sha, registered_at}]` | Any | `read` |
-| `widget_get` | `name` | `{name, manifest, content_paths}` | Any | `read` |
-| `widget_propose` | `intent, surface_hint?, constraints?` | `{plan_envelope}` | Hermes | `read` |
-| `widget_dispatch` | `plan_envelope, approval_token?` | `{task_id}` | Hermes | `write_med` or `destructive` (per plan.risk) |
-| `widget_dispatch_status` | `task_id` | `{state, log_url, commit_sha?, error?}` | Hermes, dashboard | `read` |
-| `widget_remove` | `name, reason` | `{ok}` | Hermes | `destructive` |
+| Tool | Args | Returns | Caller | Risk | Status |
+|---|---|---|---|---|---|
+| `widget_list` | `visibility?` | `{widgets}` | Any | `read` | **live** |
+| `widget_get` | `name` | `{name, manifest, …}` | Any | `read` | **live** |
+| `widget_propose` | `plan` | `{plan, risk, needs_approval}` | Hermes | `read` | **live** |
+| `widget_dispatch` | `plan, approval_token, requested_by?` | `{task_id, status}` | Hermes | `write_med` | **live** |
+| `widget_dispatch_status` | `task_id` | `{status, branch, commit_sha?, error?, …}` | Hermes, dashboard | `read` | **live** |
+| `widget_remove` | `name, reason, approval_token` | `{task_id}` | Hermes | `destructive` (floor) | **live** |
 
-`widget_propose` returns a structured plan (see § 5) without executing. `widget_dispatch` is what actually launches Claude Code with the plan. If `plan.risk` is anything above `write_low`, the call requires an `approval_token` previously issued (see § 6).
+`widget_propose` **validates** a plan envelope (see §5) drafted by Hermes'
+widget-planning skill against a zod schema and returns it normalised with the
+computed `risk` — it executes nothing. `widget_dispatch` (gated by an approval
+token) records an `agent_tasks` row and spawns the detached **dispatch-runner**:
+a fresh git **worktree** off `main`, `claude -p` reading
+[`docs/agent-dispatch.md`](../docs/agent-dispatch.md) + the plan, verify
+(`check`/`build`/squawk) before commit, then fast-forward `main` + push on
+success only. It returns a `task_id`; poll `widget_dispatch_status`. The live
+checkout is never touched, so a failed run can't break the deployed tree; each
+widget is one commit → `git revert`-able individually. `widget_remove` dispatches
+a removal commit through the same pipeline. Dispatched sessions get HouseholdMCP
+via the repo's [`.mcp.json`](../.mcp.json).
 
 ### Dashboard
 

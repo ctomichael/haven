@@ -205,6 +205,31 @@ if (delTodo) {
   await callAndPrint('todo_delete', { id: delTodo.id, reason: 'smoke', approval_token: token });
 }
 
+// --- Widget dispatch: validate plan + prove dispatch is gated ------------
+// (We don't run a real dispatch here — that spawns claude -p against a git
+// worktree, which only makes sense on the Beelink.)
+console.log('\n=== widget_propose with INVALID plan (expect invalid_args) ===');
+await callAndPrint('widget_propose', { plan: { name: 'Bad Name!', intent: 'x' } });
+console.log('\n=== widget_propose with valid plan (expect risk) ===');
+await callAndPrint('widget_propose', {
+  plan: {
+    name: 'snow_watch',
+    intent: 'Show snow days each morning',
+    data_strategy: { level: 0 },
+    rollback: 'git revert the widget commit',
+  },
+});
+console.log('\n=== widget_dispatch WITHOUT token (expect permission_denied) ===');
+await callAndPrint('widget_dispatch', {
+  plan: {
+    name: 'snow_watch',
+    intent: 'Show snow days each morning',
+    data_strategy: { level: 0 },
+    rollback: 'git revert',
+  },
+  approval_token: '',
+});
+
 await callAndPrint('autonomy_policy_list', {});
 console.log('\n=== autonomy_policy_set todo_delete→auto (expect floor refusal) ===');
 await callAndPrint('autonomy_policy_set', {

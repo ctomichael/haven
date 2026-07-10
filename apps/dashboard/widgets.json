@@ -1,0 +1,13 @@
+{
+  "$comment": "Global widget registry the dashboard reads. One entry per widget folder under src/lib/widgets/<slug>/. Dispatched Claude Code sessions add an entry here (one commit per widget). See docs/agent-dispatch.md.",
+  "widgets": [
+    {
+      "slug": "snow_watch",
+      "title": "Snow watch",
+      "enabled": true,
+      "surface": { "wall": true, "phone": true },
+      "position": { "col_span": 6 },
+      "schedule": { "show_between": ["06:00", "12:00"] }
+    }
+  ]
+}

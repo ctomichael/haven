@@ -1,0 +1,12 @@
+{
+  "$comment": "HouseholdMCP for dispatched Claude Code sessions (widget_dispatch → claude -p). Gives a dispatched run tools like dashboard_reload and event_kind_register. DATABASE_URL is inherited from the environment the runner is spawned in (the backend's env on the Beelink).",
+  "mcpServers": {
+    "household": {
+      "command": "bun",
+      "args": ["run", "apps/mcp/src/index.ts"],
+      "env": {
+        "HAVEN_MCP_AGENT_ID": "claude-code-dispatch"
+      }
+    }
+  }
+}

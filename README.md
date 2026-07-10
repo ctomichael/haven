@@ -109,6 +109,8 @@ Set on the Beelink in `/etc/haven/.env`. See
 | `HAVEN_NOTES_DIR` | Where the nightly notes export writes markdown (default `/var/haven/notes`) |
 | `HAVEN_BACKEND_URL` | Backend base URL the MCP calendar tools proxy to (default `http://localhost:8080`) |
 | `HAVEN_APPROVAL_SECRET` | HMAC secret for single-use approval tokens (gated destructive tools) — **set in prod** |
+| `HAVEN_REPO_DIR` / `HAVEN_TASKS_DIR` | Widget dispatch: repo path (default cwd; `/opt/haven` in prod) + per-task working dir (default `/tmp/haven-tasks`; `/var/haven/tasks` in prod) |
+| `HAVEN_DISPATCH_MODEL` | Model for dispatched `claude -p` runs (default `sonnet`) |
 
 ## Production (Beelink Ubuntu VM)
 

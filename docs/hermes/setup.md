@@ -120,7 +120,21 @@ Until these are set, `calendar_event_create` returns `not_configured` and the
 intake skill should fall back to a dated todo. Check with
 `curl localhost:8080/api/calendar/config`.
 
-## 6. Command allowlist (for dispatch — Phase 5)
+## 6. Widget dispatch (`claude -p`)
 
-So `widget_dispatch` can run `claude -p` unattended, add the invocation to
-Hermes' `command_allowlist` in `config.yaml`. Until Phase 5 this isn't needed.
+`widget_dispatch` spawns the dispatch-runner
+([`apps/mcp/src/dispatch-runner.ts`](../../apps/mcp/src/dispatch-runner.ts)),
+which runs `claude -p` in a git worktree and pushes on success. Prerequisites on
+the Beelink (as the `haven` user):
+
+1. `claude` CLI installed **and authenticated** (`claude` runs non-interactively).
+2. Git **push access** to `origin` (the deploy key already on the box).
+3. Env for the MCP process (already has `DATABASE_URL`): optionally
+   `HAVEN_REPO_DIR=/opt/haven`, `HAVEN_TASKS_DIR=/var/haven/tasks`,
+   `HAVEN_DISPATCH_MODEL=sonnet` (opus for gnarly plans), `HAVEN_APPROVAL_SECRET`.
+4. The runner itself is spawned by the MCP process, so no `command_allowlist`
+   entry is needed for it. Dispatched sessions get HouseholdMCP via the repo's
+   `.mcp.json`.
+
+Verify a dispatch with a trivial plan and watch `widget_dispatch_status` +
+`/var/haven/tasks/<id>/run.log`.

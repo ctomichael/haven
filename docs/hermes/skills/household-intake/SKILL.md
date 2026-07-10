@@ -45,8 +45,8 @@ Every tool below is namespaced `mcp_household_` (e.g.
    | **Todo** | a task to do, esp. with a deadline | `todo_create title=… [due_at] [assignee] source_inbox_id=<id>` |
    | **Calendar event** | a dated/timed event, appointment, meeting | `calendar_event_create summary=… start=<ISO+offset> source_inbox_id=<id>` (shared family calendar) |
    | **Fact / note** | a statement about the world, no action ("Fiona likes daffodils") | `note_append body=… [subject=person:fiona] source_inbox_id=<id>` |
-   | **Widget request** | "show me … on the wall / every morning" | `widget_propose` → dispatch *(Phase 5)* |
-   | **Automation** | "make the heat pump / lights …" | draft + `ha_automation_write` *(Phase 6)* |
+   | **Widget request** | "show me … on the wall / every morning" | hand to the **widget-planning** skill → **haven-dispatch** |
+   | **Automation** | "make the heat pump / lights …" | hand to the **automation-authoring** skill *(Phase 6)* |
    | **Reminder / standing request** | "remind me every Sunday …" | create a Hermes cron; leave a note of what you set up |
    | **Unclear** | can't confidently classify | see step 6 |
 

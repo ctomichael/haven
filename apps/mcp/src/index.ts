@@ -70,6 +70,14 @@ import {
   widgetListSchema,
   widgetGet,
   widgetGetSchema,
+  widgetPropose,
+  widgetProposeSchema,
+  widgetDispatch,
+  widgetDispatchSchema,
+  widgetDispatchStatus,
+  widgetDispatchStatusSchema,
+  widgetRemove,
+  widgetRemoveSchema,
 } from './tools/widgets.ts';
 import { userList, userListSchema, deviceList, deviceListSchema } from './tools/users.ts';
 import {
@@ -345,6 +353,30 @@ server.tool(
   'Get a widget manifest + metadata by name.',
   widgetGetSchema,
   withAudit('widget_get', widgetGet as ToolFn),
+);
+server.tool(
+  'widget_propose',
+  'Validate a plan envelope (contract §5) and return it normalised with computed risk. Pure — executes nothing. Draft the plan with the widget-planning skill first.',
+  widgetProposeSchema,
+  withAudit('widget_propose', widgetPropose as ToolFn),
+);
+server.tool(
+  'widget_dispatch',
+  'Dispatch a validated plan to Claude Code (worktree → claude -p → verify → push). Gated (approval_token). Returns a task_id; poll widget_dispatch_status.',
+  widgetDispatchSchema,
+  withAudit('widget_dispatch', widgetDispatch as ToolFn),
+);
+server.tool(
+  'widget_dispatch_status',
+  'Get the status of a dispatched task (queued|running|succeeded|failed|rolled_back) + commit/error.',
+  widgetDispatchStatusSchema,
+  withAudit('widget_dispatch_status', widgetDispatchStatus as ToolFn),
+);
+server.tool(
+  'widget_remove',
+  'Remove a widget (destructive, floor). Dispatches a removal commit through the same pipeline. Requires an approval_token.',
+  widgetRemoveSchema,
+  withAudit('widget_remove', widgetRemove as ToolFn),
 );
 server.tool(
   'dashboard_reload',

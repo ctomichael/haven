@@ -1,0 +1,9 @@
+{
+  "name": "snow_watch",
+  "title": "Snow watch",
+  "description": "Highlights days in the forecast with snow, for the morning ski check.",
+  "refresh": "static",
+  "size": { "col_span": 6 },
+  "data_sources": ["weather"],
+  "surface": { "wall": true, "phone": true }
+}

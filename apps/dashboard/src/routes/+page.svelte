@@ -17,6 +17,8 @@
   import StatusBar from '$lib/components/StatusBar.svelte';
   import NavMenu from '$lib/components/NavMenu.svelte';
   import BriefingWidget from '$lib/components/BriefingWidget.svelte';
+  import WidgetHost from '$lib/components/WidgetHost.svelte';
+  import type { Surface } from '$lib/surface';
   import { LayoutGrid } from 'lucide-svelte';
   import { SENSOR_TILES } from '$lib/sensors';
 
@@ -97,8 +99,14 @@
   let now = $state(new Date());
   let timer: ReturnType<typeof setInterval> | undefined;
 
+  // Surface for the registry-driven widget host (wall vs phone). Defaults to
+  // the wall for SSR; corrected on mount. Matches +layout's detection.
+  let surface = $state<Surface>('eink');
+
   onMount(() => {
     timer = setInterval(() => (now = new Date()), 60_000);
+    const q = new URL(window.location.href).searchParams.get('surface');
+    surface = q === 'phone' || q === 'eink' ? q : window.innerWidth <= 600 ? 'phone' : 'eink';
   });
   onDestroy(() => {
     if (timer) clearInterval(timer);
@@ -188,6 +196,11 @@
         />
       </Cell>
     {/each}
+
+    <!-- Registry-driven widgets (dispatched by Hermes → claude -p). Each
+         renders its own Cell; absent/out-of-schedule widgets render nothing. -->
+    <WidgetHost {surface} />
+
     <Cell w={6}><CaptureButton onclick={() => goto('/capture')} /></Cell>
   </DashboardGrid>
 
