@@ -35,6 +35,12 @@ function snippet(text: string, max = 160): string {
   return t.length > max ? `${t.slice(0, max - 1)}…` : t;
 }
 
+// postgres returns timestamptz as Date objects; normalise to ISO strings so
+// hits are comparable/serialisable regardless of source column.
+function iso(v: unknown): string {
+  return v instanceof Date ? v.toISOString() : String(v);
+}
+
 export async function searchAll(args: {
   query: string;
   kinds?: ('note' | 'todo' | 'inbox')[];
@@ -57,7 +63,7 @@ export async function searchAll(args: {
         ref_id: r.id,
         ref: `note:${r.id}`,
         snippet: snippet([r.title, r.body].filter(Boolean).join(' — ')),
-        ts: r.created_at,
+        ts: iso(r.created_at),
       });
     }
   }
@@ -76,7 +82,7 @@ export async function searchAll(args: {
         ref_id: r.id,
         ref: `todo:${r.id}`,
         snippet: snippet([r.title, r.notes].filter(Boolean).join(' — ')),
-        ts: r.created_at,
+        ts: iso(r.created_at),
       });
     }
   }
@@ -95,11 +101,11 @@ export async function searchAll(args: {
         ref_id: r.id,
         ref: `inbox:${r.id}`,
         snippet: snippet(r.raw_text),
-        ts: r.ts,
+        ts: iso(r.ts),
       });
     }
   }
 
-  hits.sort((a, b) => b.ts.localeCompare(a.ts));
+  hits.sort((a, b) => new Date(b.ts).getTime() - new Date(a.ts).getTime());
   return { hits: hits.slice(0, args.limit) };
 }

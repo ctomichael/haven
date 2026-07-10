@@ -210,6 +210,28 @@ bridges to an SSE `dashboard:reload` event for all matching surfaces; they
 `invalidateAll()` on next idle tick. `dashboard_screenshot` uses adbd to
 capture the Boox — useful for remote debugging.
 
+### Conversation — briefings & questions (agent → household)
+
+| Tool | Args | Returns | Caller | Risk | Status |
+|---|---|---|---|---|---|
+| `briefing_publish` | `dedupe_key, title, body?, severity, surface, source_refs, expires_at?` | `briefing` | Hermes | `write_low` | **live** |
+| `briefing_resolve` | `dedupe_key` | `{resolved}` | Hermes | `write_low` | **live** |
+| `briefing_list` | `include_resolved=false, limit=50` | `{briefings}` | Any | `read` | **live** |
+| `question_ask` | `question, options?, context?, target_surface, target_user?, expires_at?` | `question` | Hermes | `write_low` | **live** |
+| `question_get` | `id` | `question` | Any | `read` | **live** |
+
+The two-way surface (P3). **Briefings** are what the review job decides is worth
+surfacing — idempotent on `dedupe_key` so repeated runs refresh rather than
+duplicate; re-surfaces only on severity escalation; `severity` is
+`info|attention|urgent`. The wall reads active ones (`GET /api/briefings`) and
+taps to acknowledge (`PATCH /api/briefings/:id/ack`). **Questions** show a modal
+on the wall/phone (SSE `agent:question`) and mirror to Telegram; the answer
+(`POST /api/questions/:id/answer`) records it and fires the Hermes webhook
+(`question.answered`) so a fresh run resumes the pending work using the
+question's `context`. Approvals (P4) ride these same rails with
+`options=[approve, reject]`. Continuity lives entirely in these tables — Hermes
+cron/gateway agents are fresh per run and must not rely on session memory.
+
 ### Users and devices
 
 | Tool | Args | Returns | Caller | Risk |

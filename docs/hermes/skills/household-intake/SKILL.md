@@ -57,10 +57,11 @@ Every tool below is namespaced `mcp_household_` (e.g.
 
 6. **Ask only when it changes the outcome.** If an intent is genuinely
    ambiguous *and* guessing wrong would be annoying to undo, ask via
-   `question_ask` (Phase 3; until then, reply on Telegram). Otherwise **prefer
-   the reversible action** and say what you did — a wrong note is cheaper to
-   fix than a missed pause. Leave the item `pending` (don't file) while a
-   question is outstanding; the answer resumes this skill.
+   `question_ask` — pass `context={ resume: 'household-intake', inbox_id }` so
+   the answer resumes exactly here. It shows a modal on the wall/phone and can
+   mirror to Telegram. Otherwise **prefer the reversible action** and say what
+   you did — a wrong note is cheaper to fix than a missed pause. Leave the item
+   `pending` (don't file) while a question is outstanding.
 
 7. **File with provenance.** Once every intent for the item is handled,
    `inbox_file id=<id> refs=[…] status=filed`, where refs are the typed ids you

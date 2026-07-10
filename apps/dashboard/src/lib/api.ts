@@ -309,7 +309,7 @@ export type InboxMetadata = {
   [key: string]: unknown;
 };
 
-export type InboxStatus = 'pending' | 'filed' | 'ignored';
+export type InboxStatus = 'pending' | 'processing' | 'filed' | 'ignored';
 
 export type InboxFiledRef = {
   kind: string;
@@ -341,4 +341,78 @@ export async function fetchInbox(
   if (!res.ok) throw new Error(`fetchInbox failed: HTTP ${res.status}`);
   const data = (await res.json()) as { rows: ApiInboxItem[] };
   return data.rows;
+}
+
+// ----- Briefings (agent surfacing) -------------------------------------
+
+export type BriefingSeverity = 'info' | 'attention' | 'urgent';
+
+export type ApiBriefing = {
+  id: string;
+  dedupe_key: string;
+  severity: BriefingSeverity;
+  title: string;
+  body: string | null;
+  surface: 'wall' | 'phone' | 'all';
+  source_refs: string[];
+  created_at: string;
+  acknowledged_at: string | null;
+};
+
+export async function fetchBriefings(
+  fetchFn: typeof fetch = fetch,
+  params: { surface?: 'wall' | 'phone'; limit?: number } = {},
+): Promise<ApiBriefing[]> {
+  const q = new URLSearchParams();
+  if (params.surface) q.set('surface', params.surface);
+  if (params.limit !== undefined) q.set('limit', String(params.limit));
+  const url = '/api/briefings' + (q.size ? `?${q.toString()}` : '');
+  const res = await fetchFn(url);
+  if (!res.ok) throw new Error(`fetchBriefings failed: HTTP ${res.status}`);
+  const data = (await res.json()) as { briefings: ApiBriefing[] };
+  return data.briefings;
+}
+
+export async function ackBriefing(id: string, fetchFn: typeof fetch = fetch): Promise<void> {
+  const res = await fetchFn(`/api/briefings/${id}/ack`, { method: 'PATCH' });
+  if (!res.ok) throw new Error(`ackBriefing failed: HTTP ${res.status}`);
+}
+
+// ----- Agent questions (modal) -----------------------------------------
+
+export type ApiQuestion = {
+  id: string;
+  question: string;
+  options: string[];
+  target_surface: 'wall' | 'phone' | 'all';
+  target_user: string | null;
+  created_at: string;
+};
+
+export async function fetchQuestions(
+  fetchFn: typeof fetch = fetch,
+  params: { surface?: 'wall' | 'phone'; limit?: number } = {},
+): Promise<ApiQuestion[]> {
+  const q = new URLSearchParams();
+  if (params.surface) q.set('surface', params.surface);
+  if (params.limit !== undefined) q.set('limit', String(params.limit));
+  const url = '/api/questions' + (q.size ? `?${q.toString()}` : '');
+  const res = await fetchFn(url);
+  if (!res.ok) throw new Error(`fetchQuestions failed: HTTP ${res.status}`);
+  const data = (await res.json()) as { questions: ApiQuestion[] };
+  return data.questions;
+}
+
+export async function answerQuestion(
+  id: string,
+  answer: string,
+  answeredBy?: string,
+  fetchFn: typeof fetch = fetch,
+): Promise<void> {
+  const res = await fetchFn(`/api/questions/${id}/answer`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ answer, answered_by: answeredBy }),
+  });
+  if (!res.ok) throw new Error(`answerQuestion failed: HTTP ${res.status}`);
 }

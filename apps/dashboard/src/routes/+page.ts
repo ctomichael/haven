@@ -5,7 +5,9 @@ import {
   fetchWeather,
   fetchHaEntities,
   fetchCalendar,
+  fetchBriefings,
   type HaEntity,
+  type ApiBriefing,
 } from '$lib/api';
 import type { Sensor, CalendarEvent } from '$lib/dummy';
 import { startOfDay, addDays, toWidgetEvent, markNext } from '$lib/calendar';
@@ -25,7 +27,7 @@ export const load: PageLoad = async ({ fetch }) => {
   const dayStart = startOfDay(new Date());
   const dayEnd = addDays(dayStart, 1);
 
-  const [todos, shopping, weather, haEntities, calRaw] = await Promise.all([
+  const [todos, shopping, weather, haEntities, calRaw, briefings] = await Promise.all([
     fetchTodos(fetch).catch(() => []),
     fetchShopping(fetch).catch(() => []),
     fetchWeather(fetch).catch(() => null),
@@ -34,6 +36,7 @@ export const load: PageLoad = async ({ fetch }) => {
       fetch,
     ).catch(() => null),
     fetchCalendar(dayStart, dayEnd, fetch).catch(() => null),
+    fetchBriefings(fetch, { surface: 'wall', limit: 6 }).catch((): ApiBriefing[] => []),
   ]);
 
   // Today's events for the widget; null when the ICS feed isn't configured.
@@ -52,5 +55,5 @@ export const load: PageLoad = async ({ fetch }) => {
       )
     : null;
 
-  return { todos, shopping, weather, sensors, calendar };
+  return { todos, shopping, weather, sensors, calendar, briefings };
 };

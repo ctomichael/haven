@@ -16,11 +16,18 @@
   import CaptureButton from '$lib/components/CaptureButton.svelte';
   import StatusBar from '$lib/components/StatusBar.svelte';
   import NavMenu from '$lib/components/NavMenu.svelte';
+  import BriefingWidget from '$lib/components/BriefingWidget.svelte';
   import { LayoutGrid } from 'lucide-svelte';
   import { SENSOR_TILES } from '$lib/sensors';
 
   import { dummy } from '$lib/dummy';
-  import { patchTodo, type ApiTodo, type ApiShoppingItem, type ApiWeather } from '$lib/api';
+  import {
+    patchTodo,
+    type ApiTodo,
+    type ApiShoppingItem,
+    type ApiWeather,
+    type ApiBriefing,
+  } from '$lib/api';
 
   let { data }: {
     data: {
@@ -29,6 +36,7 @@
       weather: ApiWeather | null;
       sensors: typeof dummy.sensors | null;
       calendar: typeof dummy.calendar | null;
+      briefings: ApiBriefing[];
     };
   } = $props();
 
@@ -126,6 +134,12 @@
       </button>
     </div>
   </header>
+
+  {#if data.briefings.length > 0}
+    <div class="briefing-slot">
+      <BriefingWidget briefings={data.briefings} />
+    </div>
+  {/if}
 
   <DashboardGrid columns={12} rows="200px 1fr 128px">
     <Cell w={5}><ClockWidget /></Cell>

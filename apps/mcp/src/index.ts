@@ -44,6 +44,20 @@ import {
   calendarEventUpdateSchema,
 } from './tools/calendar.ts';
 import {
+  briefingPublish,
+  briefingPublishSchema,
+  briefingResolve,
+  briefingResolveSchema,
+  briefingList,
+  briefingListSchema,
+} from './tools/briefings.ts';
+import {
+  questionAsk,
+  questionAskSchema,
+  questionGet,
+  questionGetSchema,
+} from './tools/questions.ts';
+import {
   eventKindRegister,
   eventKindRegisterSchema,
   eventKindsList,
@@ -211,6 +225,36 @@ server.tool(
   'Cross-tier recall across notes, todos, and inbox. Returns typed refs (note:*, todo:*, inbox:*). "Have we mentioned X before?"',
   searchAllSchema,
   withAudit('search_all', searchAll as ToolFn),
+);
+server.tool(
+  'briefing_publish',
+  'Surface something worth attention on the wall/phone (idempotent on dedupe_key). severity info|attention|urgent; re-publishing refreshes and re-surfaces on escalation.',
+  briefingPublishSchema,
+  withAudit('briefing_publish', briefingPublish as ToolFn),
+);
+server.tool(
+  'briefing_resolve',
+  'Mark a briefing no longer true (by dedupe_key) so it drops off the surfaces.',
+  briefingResolveSchema,
+  withAudit('briefing_resolve', briefingResolve as ToolFn),
+);
+server.tool(
+  'briefing_list',
+  'List active briefings (highest severity first). The review job dedupes against this, not memory.',
+  briefingListSchema,
+  withAudit('briefing_list', briefingList as ToolFn),
+);
+server.tool(
+  'question_ask',
+  'Ask the household a question (modal on wall/phone + it can be mirrored to Telegram). context carries what a fresh run needs to resume once answered.',
+  questionAskSchema,
+  withAudit('question_ask', questionAsk as ToolFn),
+);
+server.tool(
+  'question_get',
+  'Get an agent question (and its answer, once given) by id.',
+  questionGetSchema,
+  withAudit('question_get', questionGet as ToolFn),
 );
 server.tool(
   'calendar_list_events',

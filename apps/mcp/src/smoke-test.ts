@@ -160,6 +160,24 @@ await callAndPrint('note_append', {
 await callAndPrint('note_search', { query: 'daffodils', limit: 3 });
 await callAndPrint('search_all', { query: 'daffodils', limit: 5 });
 
+// --- Briefings + questions (conversation surfaces) ----------------------
+await callAndPrint('briefing_publish', {
+  dedupe_key: todo ? `todo-due:${todo.id}` : 'smoke-briefing',
+  title: 'Carpet decision due in 3 days',
+  body: 'Pick the new house carpet by 23 Jul.',
+  severity: 'attention',
+  source_refs: todo ? [`todo:${todo.id}`] : [],
+  actor: 'smoke-test',
+});
+await callAndPrint('briefing_list', { limit: 5 });
+await callAndPrint('question_ask', {
+  question: 'Which carpet sample did we prefer — the wool or the loop pile?',
+  options: ['Wool', 'Loop pile'],
+  context: { resume: 'household-intake', inbox_id: appended?.id },
+  target_surface: 'all',
+  actor: 'smoke-test',
+});
+
 // --- Verify the writes landed -------------------------------------------
 await callAndPrint('inbox_list', { limit: 3 });
 await callAndPrint('event_kinds_list');
