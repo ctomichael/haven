@@ -68,25 +68,29 @@ Every error returns `{error: {code, message, details?}}`. Codes:
 
 ### Inbox — universal capture and filing
 
-| Tool | Args | Returns | Caller | Risk |
-|---|---|---|---|---|
-| `inbox_append` | `source, raw_text, audio_url?, metadata?, actor?` | `{id, ts}` | Hermes, dashboard | `write_low` |
-| `inbox_get` | `id` | `{id, ts, source, raw_text, audio_url, metadata, status, filed_refs}` | Any | `read` |
-| `inbox_list` | `status?, since?, limit=50` | `[row]` | Any | `read` |
-| `inbox_classify_and_file` | `id, classification` | `{filed_refs: [{kind, ref_id}]}` | Hermes | `write_low` |
-| `inbox_replay` | `id, force=false` | `{filed_refs}` | Admin | `write_low` |
+| Tool | Args | Returns | Caller | Risk | Status |
+|---|---|---|---|---|---|
+| `inbox_append` | `source, raw_text, audio_url?, metadata?, device?, actor?` | `{id, ts}` | Hermes, dashboard | `write_low` | **live** |
+| `inbox_get` | `id` | `{id, ts, source, raw_text, audio_url, metadata, status, filed_refs}` | Any | `read` | **live** |
+| `inbox_list` | `status?, since?, older_than?, limit=50` | `{rows}` | Any | `read` | **live** |
+| `inbox_set_status` | `id, status, expect?` | `{updated, id, status}` | Hermes | `write_low` | **live** |
+| `inbox_file` | `id, refs[], status='filed'\|'ignored'` | `{id, status, filed_refs}` | Hermes | `write_low` | **live** |
 
-`classification` object:
-```json
-{
-  "kind": "todo" | "shopping" | "calendar" | "event" | "note" | "ignore",
-  "payload": { ... },           // shape depends on kind
-  "confidence": 0.0–1.0,
-  "reasoning": "string"
-}
-```
+Filing is **decomposed**, not a single `classify_and_file` tool: classification
+lives in the `household-intake` Hermes skill (see
+[`../docs/hermes/skills/household-intake/`](../docs/hermes/skills/household-intake/SKILL.md)),
+which creates the typed records (`todo_create`, `shopping_add`, …) and then
+records provenance with `inbox_file`. This keeps judgment in the skill (tunable
+without a code deploy) and the tools mechanical.
 
-`inbox_classify_and_file` writes the new row(s) to the appropriate table/file AND updates the `raw_inbox` row's `status → filed` and `filed_refs` to point at what got created. One inbox row can produce multiple filed refs (a voice memo could split into one todo + one note append).
+Lifecycle: `pending → processing → filed | ignored`. The intake pipeline
+**claims** an item with `inbox_set_status status=processing expect=pending`
+(an optimistic compare-and-set: `{updated:false}` means another run won the
+race, so stop) so the push webhook and the sweeper cron can both fire safely.
+`older_than` (e.g. `'10m'`) is the sweeper's filter for stragglers. `inbox_file`
+**appends** to `filed_refs`, so a multi-intent capture can file in parts;
+refs are opaque typed strings (`todo:<uuid>`, `shopping:<uuid>`, `gcal:<id>`,
+`note:<uuid>`).
 
 ### Todos
 
@@ -95,14 +99,30 @@ Every error returns `{error: {code, message, details?}}`. Codes:
 | `todo_list` | `done?, limit=200` | `{todos:[todo]}` | Any | `read` | **live** |
 | `todo_create` | `title, due_at?, tags?, visibility?, assignee?, source_inbox_id?` | `todo` | Hermes, dashboard | `write_low` | **live** |
 | `todo_set_done` | `id, done` | `todo` | Hermes, dashboard | `write_low` | **live** |
-| `todo_update` | `id, patch` | `{ok}` | Hermes | `write_low` | planned |
-| `todo_delete` | `id, reason` | `{ok}` | Hermes | `destructive` | planned |
+| `todo_update` | `id, title?, notes?, due_at?, tags?, visibility?, assignee?` | `todo` | Hermes | `write_low` | **live** |
+| `todo_delete` | `id, reason, approval_token` | `{ok}` | Hermes | `destructive` | planned (P4) |
 
 `assignee` is a user handle (`michael`, `fiona`), resolved to `assignee_user_id`
 server-side — the same convention as the `/api/todos` REST route. Each todo is
 returned with a derived `done` boolean alongside the raw `done_at` timestamp.
-Richer `todo_list` filtering (`due_before`, `tag`, `q`, …) lands with
-`todo_update` when the write-med approval flow does.
+`todo_update` takes explicit named fields (only those present change; pass
+`null` to clear a nullable one) rather than an opaque `patch`. `todo_delete`
+is `destructive` and lands with the Phase 4 approval-token flow.
+
+### Shopping
+
+| Tool | Args | Returns | Caller | Risk | Status |
+|---|---|---|---|---|---|
+| `shopping_list` | `bought?, limit=200` | `{items}` | Any | `read` | **live** |
+| `shopping_add` | `name, qty?, store?, aisle?, visibility?, source_inbox_id?` | `item` | Hermes, dashboard | `write_low` | **live** |
+| `shopping_update` | `id, bought?, name?, qty?, store?, aisle?` | `item` | Hermes, dashboard | `write_low` | **live** |
+| `shopping_remove` | `id, approval_token` | `{ok}` | Hermes | `write_med` | planned (P4) |
+
+Mirrors the `/api/shopping` REST route (same `bought` derived boolean). Marking
+an item **bought** is `shopping_update bought=true` — it sets `purchased_at` and
+keeps the row, so history and provenance survive. `shopping_remove` (genuine
+deletion, rarely needed) is `write_med` and gated behind an approval token.
+`aisle` is one of `produce | bakery | dairy | pantry | other`.
 
 ### Notes (markdown files in git repo)
 
@@ -165,13 +185,16 @@ Calendar mirror updates on a 5-min schedule plus push subscriptions; `calendar_s
 
 ### Dashboard
 
-| Tool | Args | Returns | Caller | Risk |
-|---|---|---|---|---|
-| `dashboard_reload` | `reason?, surface?` | `{notified: [device_id]}` | Claude Code, admin | `write_low` |
-| `dashboard_status` | — | `{surfaces: [{device_id, last_seen, build_sha, online}]}` | Any | `read` |
-| `dashboard_screenshot` | `device_id` | `{png_url}` | Admin | `read` |
+| Tool | Args | Returns | Caller | Risk | Status |
+|---|---|---|---|---|---|
+| `dashboard_reload` | `reason, surface='all'` | `{ok, reason, surface}` | Claude Code, Hermes, admin | `write_low` | **live** |
+| `dashboard_status` | — | `{surfaces: [{device_id, last_seen, build_sha, online}]}` | Any | `read` | planned |
+| `dashboard_screenshot` | `device_id` | `{png_url}` | Admin | `read` | planned |
 
-`dashboard_reload` triggers an SSE `dashboard:reload` event to all matching surfaces; they refresh on next idle tick. `dashboard_screenshot` uses adbd to capture the Boox — useful for remote debugging.
+`dashboard_reload` emits a Postgres `NOTIFY haven_reload`, which the backend
+bridges to an SSE `dashboard:reload` event for all matching surfaces; they
+`invalidateAll()` on next idle tick. `dashboard_screenshot` uses adbd to
+capture the Boox — useful for remote debugging.
 
 ### Users and devices
 

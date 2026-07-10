@@ -56,6 +56,7 @@ const callAndPrint = async (
 await callAndPrint('user_list', { actor: 'smoke-test' });
 await callAndPrint('device_list');
 await callAndPrint('widget_list');
+await callAndPrint('shopping_list', { bought: false, limit: 3 });
 
 // --- Writes -------------------------------------------------------------
 await callAndPrint('event_kind_register', {
@@ -104,7 +105,49 @@ console.log('\n=== todo_create → ===');
 console.log(todo);
 
 if (todo) {
+  await callAndPrint('todo_update', {
+    id: todo.id,
+    due_at: '2026-07-23T09:00:00Z',
+    notes: 'set by smoke test',
+    actor: 'smoke-test',
+  });
   await callAndPrint('todo_set_done', { id: todo.id, done: true, actor: 'smoke-test' });
+}
+
+// --- Shopping: add → mark bought ----------------------------------------
+const shopResult = (await client.callTool({
+  name: 'shopping_add',
+  arguments: {
+    name: 'Smoke-test milk',
+    qty: '2L',
+    aisle: 'dairy',
+    source_inbox_id: appended?.id,
+    actor: 'smoke-test',
+  },
+})) as { content: Array<{ type: string; text?: string }>; isError?: boolean };
+const shopC = shopResult.content[0];
+const shopRaw = shopC && shopC.type === 'text' ? shopC.text : undefined;
+const shopItem = shopRaw ? (JSON.parse(shopRaw) as { id: string }) : null;
+console.log('\n=== shopping_add → ===');
+console.log(shopItem);
+if (shopItem) {
+  await callAndPrint('shopping_update', { id: shopItem.id, bought: true, actor: 'smoke-test' });
+}
+
+// --- Inbox filing: claim → file with provenance refs --------------------
+if (appended) {
+  await callAndPrint('inbox_set_status', {
+    id: appended.id,
+    status: 'processing',
+    expect: 'pending',
+    actor: 'smoke-test',
+  });
+  await callAndPrint('inbox_file', {
+    id: appended.id,
+    refs: [todo ? `todo:${todo.id}` : 'todo:none', shopItem ? `shopping:${shopItem.id}` : 'shopping:none'],
+    status: 'filed',
+    actor: 'smoke-test',
+  });
 }
 
 // --- Verify the writes landed -------------------------------------------

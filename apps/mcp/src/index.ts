@@ -12,7 +12,20 @@ import {
   inboxGetSchema,
   inboxList,
   inboxListSchema,
+  inboxSetStatus,
+  inboxSetStatusSchema,
+  inboxFile,
+  inboxFileSchema,
 } from './tools/inbox.ts';
+import {
+  shoppingList,
+  shoppingListSchema,
+  shoppingAdd,
+  shoppingAddSchema,
+  shoppingUpdate,
+  shoppingUpdateSchema,
+} from './tools/shopping.ts';
+import { dashboardReload, dashboardReloadSchema } from './tools/dashboard.ts';
 import {
   eventKindRegister,
   eventKindRegisterSchema,
@@ -35,6 +48,8 @@ import {
   todoCreateSchema,
   todoSetDone,
   todoSetDoneSchema,
+  todoUpdate,
+  todoUpdateSchema,
 } from './tools/todos.ts';
 
 const server = new McpServer({
@@ -77,11 +92,12 @@ function withAudit(toolName: string, handler: ToolFn) {
   };
 }
 
-// --- Tool surface (v0.2) --------------------------------------------
-// Reads + write_low writes (inbox_append, event_log, event_kind_register)
-// auto-execute without an approval token. write_med + destructive tools
-// (todo_delete, ha_entity_call_service, widget_dispatch, etc.) require
-// the approval-token flow from MCP contract §7 — implemented later.
+// --- Tool surface (v0.3) --------------------------------------------
+// Reads + write_low writes (inbox_*, todo_*, shopping_*, event_*,
+// dashboard_reload) auto-execute without an approval token. write_med +
+// destructive tools (todo_delete, calendar_event_delete, ha_entity_call_service,
+// ha_automation_*, widget_dispatch, etc.) require the approval-token flow
+// from MCP contract §7 — landed in Phase 4 (approvals + autonomy).
 
 server.tool(
   'inbox_list',
@@ -102,6 +118,36 @@ server.tool(
   withAudit('inbox_append', inboxAppend as ToolFn),
 );
 server.tool(
+  'inbox_set_status',
+  'Move a raw_inbox item through its lifecycle (pending → processing → filed/ignored). Pass `expect` to claim optimistically without clobbering a concurrent run.',
+  inboxSetStatusSchema,
+  withAudit('inbox_set_status', inboxSetStatus as ToolFn),
+);
+server.tool(
+  'inbox_file',
+  'Close out a raw_inbox item: append the typed entity refs it produced (todo:*, shopping:*, gcal:*, note:*) and mark it filed/ignored.',
+  inboxFileSchema,
+  withAudit('inbox_file', inboxFile as ToolFn),
+);
+server.tool(
+  'shopping_list',
+  'List shopping_items with an optional bought filter. Still-needed items first.',
+  shoppingListSchema,
+  withAudit('shopping_list', shoppingList as ToolFn),
+);
+server.tool(
+  'shopping_add',
+  'Add an item to the shopping list; optionally link the source_inbox_id it was filed from.',
+  shoppingAddSchema,
+  withAudit('shopping_add', shoppingAdd as ToolFn),
+);
+server.tool(
+  'shopping_update',
+  'Update a shopping item. Marking bought sets purchased_at (item is kept, not removed).',
+  shoppingUpdateSchema,
+  withAudit('shopping_update', shoppingUpdate as ToolFn),
+);
+server.tool(
   'todo_list',
   'List todos with an optional done filter. Newest-open-first ordering.',
   todoListSchema,
@@ -118,6 +164,12 @@ server.tool(
   'Mark a todo done or re-open it by id.',
   todoSetDoneSchema,
   withAudit('todo_set_done', todoSetDone as ToolFn),
+);
+server.tool(
+  'todo_update',
+  'Partially update a todo (title, notes, due_at, tags, visibility, assignee). Only fields present change; pass null to clear a nullable field.',
+  todoUpdateSchema,
+  withAudit('todo_update', todoUpdate as ToolFn),
 );
 server.tool(
   'event_kinds_list',
@@ -148,6 +200,12 @@ server.tool(
   'Get a widget manifest + metadata by name.',
   widgetGetSchema,
   withAudit('widget_get', widgetGet as ToolFn),
+);
+server.tool(
+  'dashboard_reload',
+  'Push an SSE refresh to connected surfaces. Call after landing a widget or a batch of file/registry changes.',
+  dashboardReloadSchema,
+  withAudit('dashboard_reload', dashboardReload as ToolFn),
 );
 server.tool(
   'user_list',

@@ -5,8 +5,15 @@ import { z } from 'zod';
 import { audit } from '../audit.ts';
 import { sql } from '../db/client.ts';
 import { asJson } from '../db/jsonb.ts';
+import { notifyReload } from '../events.ts';
+import { notifyHermes } from '../services/hermes.ts';
 
 const inbox = new Hono();
+
+// raw_inbox lifecycle. Kept in sync with apps/mcp/src/tools/inbox.ts
+// INBOX_STATUSES — 'processing' is the transient claim the intake pipeline
+// sets so a concurrent sweeper skips an in-flight item.
+const INBOX_STATUSES = ['pending', 'processing', 'filed', 'ignored'] as const;
 
 // Resolve user / device handles → ids. Mirrors apps/mcp/src/tools/inbox.ts
 // — extract when a third caller appears.
@@ -67,6 +74,18 @@ inbox.post('/', zValidator('json', AppendBody), async (c) => {
       )
       returning id, ts
     `;
+    // Push to Hermes for immediate processing, and refresh the inbox surface.
+    // Both best-effort — never block or fail the capture on them.
+    void notifyHermes({
+      type: 'inbox.new',
+      inbox_id: row!.id,
+      ts: row!.ts,
+      source: args.source,
+      raw_text: args.raw_text,
+      actor: args.actor,
+      device: args.device,
+    });
+    void notifyReload({ reason: 'inbox_append', surface: 'all' });
     return c.json(row, 201);
   } catch (e) {
     status = 'error';
@@ -86,7 +105,7 @@ inbox.post('/', zValidator('json', AppendBody), async (c) => {
 // ----- GET /api/inbox --------------------------------------------------
 
 const ListQuery = z.object({
-  status: z.enum(['pending', 'filed', 'ignored']).optional(),
+  status: z.enum(INBOX_STATUSES).optional(),
   since: z.string().datetime().optional(),
   limit: z.coerce.number().int().min(1).max(500).default(50),
 });
@@ -141,5 +160,58 @@ inbox.get('/:id', zValidator('param', IdParam), async (c) => {
   });
   return c.json(row);
 });
+
+// ----- PATCH /api/inbox/:id --------------------------------------------
+// Lets a surface (or user) file/ignore a captured item and record the refs
+// it produced. Mirrors the MCP inbox_set_status / inbox_file tools so the
+// dashboard inbox screen can act without speaking MCP.
+
+const PatchBody = z.object({
+  status: z.enum(INBOX_STATUSES).optional(),
+  refs: z.array(z.string()).optional(),
+});
+
+inbox.patch(
+  '/:id',
+  zValidator('param', IdParam),
+  zValidator('json', PatchBody),
+  async (c) => {
+    const { id } = c.req.valid('param');
+    const args = c.req.valid('json');
+    let status: 'ok' | 'error' = 'ok';
+    let errorDetail: unknown = null;
+    try {
+      if (args.status === undefined && args.refs === undefined) {
+        return c.json({ error: 'nothing to update' }, 400);
+      }
+      const rows = await sql<{ id: string; status: string; filed_refs: unknown }[]>`
+        update raw_inbox
+        set status = coalesce(${args.status ?? null}, status),
+            filed_refs = filed_refs || ${asJson(args.refs ?? [])}
+        where id = ${id}
+        returning id, status, filed_refs
+      `;
+      if (rows.length === 0) {
+        status = 'error';
+        errorDetail = { error: 'not_found' };
+        return c.json({ error: 'not_found' }, 404);
+      }
+      void notifyReload({ reason: 'inbox_update', surface: 'all' });
+      return c.json(rows[0]);
+    } catch (e) {
+      status = 'error';
+      errorDetail = { error: e instanceof Error ? e.message : String(e) };
+      return c.json({ error: 'internal' }, 500);
+    } finally {
+      void audit({
+        tool: 'inbox_set_status',
+        args: { id, ...args },
+        actor: undefined,
+        resultStatus: status,
+        details: status === 'error' ? errorDetail : null,
+      });
+    }
+  },
+);
 
 export default inbox;
