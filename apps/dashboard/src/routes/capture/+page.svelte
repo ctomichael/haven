@@ -43,13 +43,13 @@
     return s === 'HOME' ? 'sage' : s === 'KIDS' ? 'amber' : s === 'ERRANDS' ? 'stone' : 'sky';
   }
 
-  // Autofocus textarea when entering type mode.
-  $effect(() => {
-    if (mode === 'type' && textareaEl) {
-      // microtask so DOM has updated
-      queueMicrotask(() => textareaEl?.focus());
-    }
-  });
+  // Focus the textarea only when the user *deliberately* switches to type mode
+  // (tapping "Type"), not when transcription flips the mode to show its result —
+  // otherwise a returning transcript pops the on-screen keyboard unprompted.
+  function enterTypeMode() {
+    mode = 'type';
+    queueMicrotask(() => textareaEl?.focus());
+  }
 
   // Tell the layout we're mid-operation so a deploy reload defers until the
   // recording / upload / save finishes rather than nuking it.
@@ -247,6 +247,7 @@
     }
 
     if (!rawText && attachments.length === 0) {
+      saving = false;
       goto('/');
       return;
     }
@@ -268,7 +269,16 @@
     } catch {
       /* don't surface in v0; inbox is forgiving */
     }
-    goto('/');
+    // The note is saved. Clear the saving state *before* navigating so the
+    // button can never get stuck on "Saving…" if navigation is slow, preempted,
+    // or hits a stale chunk after a deploy. Fall back to a hard load if the
+    // client-side navigation doesn't resolve.
+    saving = false;
+    try {
+      await goto('/');
+    } catch {
+      window.location.href = '/';
+    }
   }
 </script>
 
@@ -288,7 +298,7 @@
       <button
         type="button"
         class:on={mode === 'type'}
-        onclick={() => (mode = 'type')}
+        onclick={enterTypeMode}
       >Type</button>
     </div>
     {#if mode === 'draw'}

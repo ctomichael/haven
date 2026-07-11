@@ -6,7 +6,7 @@ import { audit } from '../audit.ts';
 import { sql } from '../db/client.ts';
 import { asJson } from '../db/jsonb.ts';
 import { notifyReload } from '../events.ts';
-import { notifyHermes } from '../services/hermes.ts';
+import { notifyHermes, type InboxPush } from '../services/hermes.ts';
 
 const inbox = new Hono();
 
@@ -74,9 +74,15 @@ inbox.post('/', zValidator('json', AppendBody), async (c) => {
       )
       returning id, ts
     `;
-    // Push to Hermes for immediate processing, and refresh the inbox surface.
-    // Both best-effort — never block or fail the capture on them.
-    void notifyHermes({
+    // Respond first; the note is saved. Then fire the Hermes webhook as a
+    // detached background task — a slow/failed/absent webhook must never block
+    // or break ingestion (notifyHermes catches everything and times out).
+    //
+    // We deliberately do NOT push a dashboard:reload here. The capture surface
+    // navigates home on its own and re-fetches; broadcasting a reload to every
+    // surface on each capture used to strand the saver's own post-save
+    // navigation (SSE → invalidateAll racing goto), hanging the "Saving…" state.
+    const push: InboxPush = {
       type: 'inbox.new',
       inbox_id: row!.id,
       ts: row!.ts,
@@ -84,8 +90,8 @@ inbox.post('/', zValidator('json', AppendBody), async (c) => {
       raw_text: args.raw_text,
       actor: args.actor,
       device: args.device,
-    });
-    void notifyReload({ reason: 'inbox_append', surface: 'all' });
+    };
+    queueMicrotask(() => void notifyHermes(push));
     return c.json(row, 201);
   } catch (e) {
     status = 'error';

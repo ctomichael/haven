@@ -23,6 +23,17 @@ may bypass the hook with `git commit --no-verify` and need no entry.
 
 ---
 
+## 2026-07-11 — Fix: note save hang + transcription keyboard
+**What:** Saving a capture no longer sticks on "Saving…" — the inbox POST no
+longer broadcasts a `dashboard:reload` (which raced the saver's own post-save
+navigation via `invalidateAll`), `save()` clears its state before navigating and
+falls back to a hard load, and the Hermes webhook now fires as a detached
+background task (`queueMicrotask`) that can't block or break ingestion. Also,
+a returning voice transcript no longer pops the on-screen keyboard (focus only
+on a deliberate "Type" tap).
+**Hermes:** No action — `inbox.new` is still delivered to your webhook exactly
+as before (just after the response, fully detached). No tool changes.
+
 ## 2026-07-11 — Changelog + Hermes read-on-update
 **What:** Added this changelog, a `pre-commit` hook enforcing it, an
 `autopull.sh` step that pushes new entries to Hermes after each pull, and the
