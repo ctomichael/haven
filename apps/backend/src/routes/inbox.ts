@@ -6,7 +6,7 @@ import { audit } from '../audit.ts';
 import { sql } from '../db/client.ts';
 import { asJson } from '../db/jsonb.ts';
 import { notifyReload } from '../events.ts';
-import { notifyHermes, type InboxPush } from '../services/hermes.ts';
+import { notifyHermes, hermesConfigured, type InboxPush } from '../services/hermes.ts';
 
 const inbox = new Hono();
 
@@ -219,5 +219,67 @@ inbox.patch(
     }
   },
 );
+
+// ----- POST /api/inbox/:id/notify --------------------------------------
+// Re-fire the Hermes webhook for an item (e.g. it was pending because the push
+// didn't fire when it was created). Unlike ingestion, this awaits the result so
+// the UI can report whether it was delivered.
+
+inbox.post('/:id/notify', zValidator('param', IdParam), async (c) => {
+  const { id } = c.req.valid('param');
+  const [row] = await sql<
+    { id: string; ts: string; source: string; raw_text: string; actor: string | null; device: string | null }[]
+  >`
+    select ri.id, ri.ts, ri.source, ri.raw_text,
+           u.handle as actor, d.handle as device
+    from raw_inbox ri
+    left join users u on u.id = ri.actor_user_id
+    left join devices d on d.id = ri.device_id
+    where ri.id = ${id}
+  `;
+  if (!row) return c.json({ error: 'not_found' }, 404);
+
+  const push: InboxPush = {
+    type: 'inbox.new',
+    inbox_id: row.id,
+    ts: row.ts,
+    source: row.source,
+    raw_text: row.raw_text,
+    actor: row.actor ?? undefined,
+    device: row.device ?? undefined,
+  };
+  const sent = await notifyHermes(push);
+  void audit({ tool: 'inbox_notify', args: { id }, actor: undefined, resultStatus: sent ? 'ok' : 'error' });
+  return c.json({ sent, configured: hermesConfigured() });
+});
+
+// ----- DELETE /api/inbox/:id -------------------------------------------
+// Remove a captured item. FK references (todos/notes/events/attachments) use
+// ON DELETE SET NULL, so anything already filed from it survives, un-linked.
+
+inbox.delete('/:id', zValidator('param', IdParam), async (c) => {
+  const { id } = c.req.valid('param');
+  try {
+    const rows = await sql`delete from raw_inbox where id = ${id} returning id`;
+    const ok = rows.length > 0;
+    void audit({
+      tool: 'inbox_delete',
+      args: { id },
+      actor: undefined,
+      resultStatus: ok ? 'ok' : 'error',
+      details: ok ? null : { error: 'not_found' },
+    });
+    return c.json(ok ? { ok: true } : { error: 'not_found' }, ok ? 200 : 404);
+  } catch (e) {
+    void audit({
+      tool: 'inbox_delete',
+      args: { id },
+      actor: undefined,
+      resultStatus: 'error',
+      details: { error: e instanceof Error ? e.message : String(e) },
+    });
+    return c.json({ error: 'internal' }, 500);
+  }
+});
 
 export default inbox;

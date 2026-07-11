@@ -23,6 +23,18 @@ may bypass the hook with `git commit --no-verify` and need no entry.
 
 ---
 
+## 2026-07-11 — Inbox item action modal + filed_refs render fix
+**What:** Tapping an inbox item opens a modal to **Delete** it, or (for pending
+items) **Send to Hermes** — re-firing the `inbox.new` webhook for items whose
+push didn't land at capture time. New backend endpoints `DELETE /api/inbox/:id`
+and `POST /api/inbox/:id/notify`. Also fixed a latent P1 bug: `filed_refs` are
+now typed strings (`todo:<uuid>`), but the inbox screen still keyed them as
+`{kind, ref_id}` objects, producing duplicate `undefined` keys that blanked the
+page on any item with 2+ filed refs.
+**Hermes:** `POST /api/inbox/:id/notify` re-delivers a stored item to your
+webhook (same `inbox.new` shape) on demand — the household uses it to retry an
+item that never reached you. No tool changes.
+
 ## 2026-07-11 — Fix: note save hang + transcription keyboard
 **What:** Saving a capture no longer sticks on "Saving…" — the inbox POST no
 longer broadcasts a `dashboard:reload` (which raced the saver's own post-save

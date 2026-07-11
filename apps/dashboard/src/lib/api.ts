@@ -311,10 +311,13 @@ export type InboxMetadata = {
 
 export type InboxStatus = 'pending' | 'processing' | 'filed' | 'ignored';
 
-export type InboxFiledRef = {
-  kind: string;
-  ref_id: string;
-};
+// Provenance refs are opaque typed strings, e.g. 'todo:<uuid>', 'gcal:<id>'
+// (set by inbox_file). The part before ':' is the kind.
+export type InboxFiledRef = string;
+
+export function filedRefKind(ref: string): string {
+  return ref.split(':')[0] ?? ref;
+}
 
 export type ApiInboxItem = {
   id: string;
@@ -341,6 +344,22 @@ export async function fetchInbox(
   if (!res.ok) throw new Error(`fetchInbox failed: HTTP ${res.status}`);
   const data = (await res.json()) as { rows: ApiInboxItem[] };
   return data.rows;
+}
+
+export async function deleteInbox(id: string): Promise<void> {
+  const res = await fetch(`/api/inbox/${id}`, { method: 'DELETE' });
+  if (!res.ok) throw new Error(`deleteInbox failed: HTTP ${res.status}`);
+}
+
+// Re-fire the Hermes webhook for an item (for pending items whose push may not
+// have fired at capture time). Returns whether it was delivered and whether the
+// webhook is configured at all.
+export async function notifyInbox(
+  id: string,
+): Promise<{ sent: boolean; configured: boolean }> {
+  const res = await fetch(`/api/inbox/${id}/notify`, { method: 'POST' });
+  if (!res.ok) throw new Error(`notifyInbox failed: HTTP ${res.status}`);
+  return (await res.json()) as { sent: boolean; configured: boolean };
 }
 
 // ----- Briefings (agent surfacing) -------------------------------------

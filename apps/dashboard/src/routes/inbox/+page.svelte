@@ -1,21 +1,76 @@
 <script lang="ts">
   import SubScreen from '$lib/components/SubScreen.svelte';
+  import Modal from '$lib/components/Modal.svelte';
   import AccentChip from '$lib/components/AccentChip.svelte';
   import FilterChips from '$lib/components/FilterChips.svelte';
-  import { Mic, Image as ImageIcon, Paperclip } from 'lucide-svelte';
-  import type { ApiInboxItem, InboxStatus } from '$lib/api';
+  import { Mic, Image as ImageIcon, Paperclip, Send, Trash2 } from 'lucide-svelte';
+  import { deleteInbox, notifyInbox, filedRefKind, type ApiInboxItem, type InboxStatus } from '$lib/api';
   import type { Accent } from '$lib/tokens';
+  import { untrack } from 'svelte';
 
   let { data }: { data: { inbox: ApiInboxItem[] } } = $props();
+
+  // Local copy so delete/actions reflect immediately; re-synced when load() runs.
+  let items = $state<ApiInboxItem[]>(untrack(() => [...data.inbox]));
+  $effect(() => {
+    items = data.inbox;
+  });
 
   let filter = $state<'all' | InboxStatus>('all');
 
   let visible = $derived(
-    filter === 'all' ? data.inbox : data.inbox.filter((i) => i.status === filter),
+    filter === 'all' ? items : items.filter((i) => i.status === filter),
   );
-  let pendingCount = $derived(data.inbox.filter((i) => i.status === 'pending').length);
-  let filedCount = $derived(data.inbox.filter((i) => i.status === 'filed').length);
-  let meta = $derived(`${pendingCount} PENDING · ${filedCount} FILED · ${data.inbox.length} TOTAL`);
+  let pendingCount = $derived(items.filter((i) => i.status === 'pending').length);
+  let filedCount = $derived(items.filter((i) => i.status === 'filed').length);
+  let meta = $derived(`${pendingCount} PENDING · ${filedCount} FILED · ${items.length} TOTAL`);
+
+  // ----- Per-item action modal -----------------------------------------
+  let selected = $state<ApiInboxItem | null>(null);
+  let busyAction = $state(false);
+  let notifyResult = $state<string | null>(null);
+
+  function openItem(item: ApiInboxItem) {
+    selected = item;
+    notifyResult = null;
+  }
+  function closeModal() {
+    selected = null;
+    busyAction = false;
+    notifyResult = null;
+  }
+
+  async function doDelete() {
+    if (!selected || busyAction) return;
+    const id = selected.id;
+    busyAction = true;
+    try {
+      await deleteInbox(id);
+      items = items.filter((i) => i.id !== id);
+      closeModal();
+    } catch {
+      notifyResult = "Couldn't delete — try again.";
+      busyAction = false;
+    }
+  }
+
+  async function doNotify() {
+    if (!selected || busyAction) return;
+    busyAction = true;
+    notifyResult = null;
+    try {
+      const { sent, configured } = await notifyInbox(selected.id);
+      notifyResult = sent
+        ? 'Sent to Hermes ✓'
+        : configured
+          ? "Hermes didn't accept it — check the agent."
+          : 'Hermes webhook not configured on this server.';
+    } catch {
+      notifyResult = "Couldn't reach the server — try again.";
+    } finally {
+      busyAction = false;
+    }
+  }
 
   // Status → accent for the badge.
   function statusAccent(status: InboxStatus): Accent {
@@ -81,7 +136,21 @@
       {@const atts = attachments(item)}
       {@const proc = isProcessing(item)}
       {@const propCat = item.metadata?.proposedCategory}
-      <li class="card" class:processing={proc}>
+      <li class="card-item">
+        <div
+          class="card"
+          class:processing={proc}
+          role="button"
+          tabindex="0"
+          aria-label={`Actions for: ${item.raw_text.slice(0, 40)}`}
+          onclick={() => openItem(item)}
+          onkeydown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              openItem(item);
+            }
+          }}
+        >
         <header>
           <span class="source-time">
             <span class="source">{item.source}</span>
@@ -111,7 +180,13 @@
         {#if atts.length > 0 || item.filed_refs.length > 0 || propCat}
           <footer>
             {#each atts as a, i (i)}
-              <a class="att" href={a.url} target="_blank" rel="noreferrer">
+              <a
+                class="att"
+                href={a.url}
+                target="_blank"
+                rel="noreferrer"
+                onclick={(e) => e.stopPropagation()}
+              >
                 {#if a.kind === 'audio'}
                   <Mic size={14} strokeWidth={2.5} />
                   Audio
@@ -127,15 +202,43 @@
             {#if propCat && item.status === 'pending'}
               <span class="proposed">PROPOSED · {String(propCat)}</span>
             {/if}
-            {#each item.filed_refs as ref (ref.ref_id)}
-              <span class="filed-as">→ {ref.kind}</span>
+            {#each item.filed_refs as ref (ref)}
+              <span class="filed-as">→ {filedRefKind(ref)}</span>
             {/each}
           </footer>
         {/if}
+        </div>
       </li>
     {/each}
   </ul>
 </SubScreen>
+
+{#if selected}
+  <Modal title="Inbox item" onClose={closeModal}>
+    <p class="modal-text">{selected.raw_text}</p>
+    <div class="modal-meta">
+      <AccentChip accent={statusAccent(selected.status)} label={selected.status.toUpperCase()} />
+      <span class="modal-time">{selected.source} · {relativeTime(selected.ts)}</span>
+    </div>
+
+    {#if notifyResult}
+      <p class="modal-result">{notifyResult}</p>
+    {/if}
+
+    <div class="modal-actions">
+      {#if selected.status === 'pending'}
+        <button class="act send" onclick={doNotify} disabled={busyAction}>
+          <Send size={18} strokeWidth={2.5} />
+          {busyAction ? 'Sending…' : 'Send to Hermes'}
+        </button>
+      {/if}
+      <button class="act delete" onclick={doDelete} disabled={busyAction}>
+        <Trash2 size={18} strokeWidth={2.5} />
+        Delete
+      </button>
+    </div>
+  </Modal>
+{/if}
 
 <style>
   .filters {
@@ -167,6 +270,12 @@
     gap: 10px;
     padding: 16px 4px;
     border-bottom: var(--border-thin) solid var(--hairline);
+    cursor: pointer;
+    text-align: left;
+    outline-offset: -2px;
+  }
+  .card:focus-visible {
+    outline: var(--border-normal) solid var(--ink);
   }
   .card.processing {
     background: var(--accent-amber-tint);
@@ -266,5 +375,64 @@
     letter-spacing: 0.16em;
     color: var(--ink);
     text-transform: uppercase;
+  }
+
+  /* ----- action modal ----- */
+  .modal-text {
+    margin: 0 0 16px;
+    font-family: var(--font-serif);
+    font-weight: 500;
+    font-size: 22px;
+    line-height: 1.35;
+    color: var(--ink);
+    white-space: pre-wrap;
+  }
+  .modal-meta {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .modal-time {
+    font-family: var(--font-mono);
+    font-weight: 600;
+    font-size: 14px;
+    letter-spacing: 0.16em;
+    color: var(--muted-mono);
+    text-transform: uppercase;
+  }
+  .modal-result {
+    margin: 0 0 16px;
+    font-family: var(--font-sans);
+    font-size: 16px;
+    color: var(--ink);
+  }
+  .modal-actions {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .act {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 64px;
+    padding: 0 20px;
+    font-family: var(--font-sans);
+    font-weight: 600;
+    font-size: 18px;
+    background: var(--paper);
+    border: var(--border-normal) solid var(--ink);
+    color: var(--ink);
+    cursor: pointer;
+  }
+  .act.delete {
+    border-color: var(--accent-rust);
+    color: var(--accent-rust);
+  }
+  .act:disabled {
+    color: var(--disabled);
+    border-color: var(--disabled);
+    cursor: default;
   }
 </style>
