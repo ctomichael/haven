@@ -9,6 +9,7 @@
 // webhook isn't configured or the changelog didn't change — never fails a deploy.
 
 import { spawnSync } from 'node:child_process';
+import { createHmac } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 
 const [, , oldSha, newSha] = process.argv;
@@ -62,13 +63,17 @@ if (!entries) {
 const controller = new AbortController();
 const timer = setTimeout(() => controller.abort(), 5000);
 try {
+  const body = JSON.stringify({ type: 'changelog.updated', from: oldSha, to: newSha, entries });
+  const signature = secret
+    ? createHmac('sha256', secret).update(body).digest('hex')
+    : '';
   const res = await fetch(url, {
     method: 'POST',
     headers: {
       'content-type': 'application/json',
-      ...(secret ? { authorization: `Bearer ${secret}` } : {}),
+      ...(secret ? { 'x-signature-256': signature } : {}),
     },
-    body: JSON.stringify({ type: 'changelog.updated', from: oldSha, to: newSha, entries }),
+    body,
     signal: controller.signal,
   });
   console.error(`[notify-changelog] sent ${entries.split('\n').length} line(s) → HTTP ${res.status}`);

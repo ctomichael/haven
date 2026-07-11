@@ -1,3 +1,4 @@
+import { createHmac } from 'node:crypto';
 // Push new captures to the Hermes agent so it processes them immediately
 // rather than waiting for its sweeper cron. Fire-and-forget: Hermes being
 // down (or unconfigured) must never fail the capture that triggered it —
@@ -58,13 +59,17 @@ export async function notifyHermes(event: HermesEvent): Promise<boolean> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
   try {
+    const body = JSON.stringify(event);
+    const signature = WEBHOOK_SECRET
+      ? createHmac('sha256', WEBHOOK_SECRET).update(body).digest('hex')
+      : '';
     const res = await fetch(WEBHOOK_URL, {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
-        ...(WEBHOOK_SECRET ? { authorization: `Bearer ${WEBHOOK_SECRET}` } : {}),
+        ...(WEBHOOK_SECRET ? { 'x-signature-256': signature } : {}),
       },
-      body: JSON.stringify(event),
+      body,
       signal: controller.signal,
     });
     if (!res.ok) {
