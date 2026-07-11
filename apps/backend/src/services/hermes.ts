@@ -67,7 +67,7 @@ export async function notifyHermes(event: HermesEvent): Promise<boolean> {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
-        ...(WEBHOOK_SECRET ? { 'x-signature-256': signature } : {}),
+        ...(WEBHOOK_SECRET ? { 'x-webhook-signature': signature } : {}),
       },
       body,
       signal: controller.signal,

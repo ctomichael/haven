@@ -71,7 +71,7 @@ try {
     method: 'POST',
     headers: {
       'content-type': 'application/json',
-      ...(secret ? { 'x-signature-256': signature } : {}),
+      ...(secret ? { 'x-webhook-signature': signature } : {}),
     },
     body,
     signal: controller.signal,
