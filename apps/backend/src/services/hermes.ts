@@ -11,7 +11,8 @@ import { createHmac } from 'node:crypto';
 //
 // Config (in /etc/haven/.env; unset on the laptop → no-op):
 //   HERMES_WEBHOOK_URL     e.g. http://localhost:8765/hooks/haven
-//   HERMES_WEBHOOK_SECRET  shared secret sent as a bearer token
+//   HERMES_WEBHOOK_SECRET  shared secret; used to HMAC-SHA256-sign the request
+//                          body, sent as the `x-webhook-signature` header
 
 const WEBHOOK_URL = process.env.HERMES_WEBHOOK_URL;
 const WEBHOOK_SECRET = process.env.HERMES_WEBHOOK_SECRET;

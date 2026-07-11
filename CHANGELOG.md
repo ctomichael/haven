@@ -23,6 +23,15 @@ may bypass the hook with `git commit --no-verify` and need no entry.
 
 ---
 
+## 2026-07-11 — Docs: Hermes webhook auth is HMAC, not Bearer
+**What:** Corrected the `hermes.ts` config comment and `docs/hermes/setup.md` to
+describe the webhook auth accurately — requests are signed with
+`x-webhook-signature: HMAC-SHA256(secret, body)`, matching the server-side fix
+(no more `Authorization: Bearer`). Docs-only; both webhook code paths
+(`notifyHermes` + `notify-changelog`) already sign this way.
+**Hermes:** Verify incoming webhooks by recomputing `HMAC-SHA256` over the raw
+request body with `HERMES_WEBHOOK_SECRET` and comparing to `x-webhook-signature`.
+
 ## 2026-07-11 — Inbox item action modal + filed_refs render fix
 **What:** Tapping an inbox item opens a modal to **Delete** it, or (for pending
 items) **Send to Hermes** — re-firing the `inbox.new` webhook for items whose

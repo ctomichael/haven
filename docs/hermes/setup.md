@@ -40,7 +40,9 @@ HERMES_WEBHOOK_URL=http://localhost:8765/hooks/haven
 HERMES_WEBHOOK_SECRET=<shared-secret>
 ```
 
-The backend sends `Authorization: Bearer <secret>` with a JSON body:
+The backend signs each request: `x-webhook-signature: <hex>` where the value is
+`HMAC-SHA256(HERMES_WEBHOOK_SECRET, raw_request_body)`. Verify it on the Hermes
+side by recomputing the HMAC over the raw body and comparing. JSON body:
 
 ```json
 { "type": "inbox.new", "inbox_id": "...", "ts": "...", "source": "phone",
